@@ -1,0 +1,23 @@
+CREATE TABLE testtable (
+    key1 VARCHAR(24),
+    key2 VARCHAR(24),
+    key3 VARCHAR(24),
+    key4 VARCHAR(24),
+    STATUS VARCHAR(15),
+    date1 TIMESTAMP(6) WITH TIME ZONE,
+    qty1 DECIMAL(14,4),
+    key5 VARCHAR(24),
+    key6 VARCHAR(24),
+    qty2 DECIMAL(14,4),
+    date2 TIMESTAMP(6) WITH TIME ZONE,
+    key7 VARCHAR(24),
+    key8 VARCHAR(24),
+    timestamp1 TIMESTAMP(6) WITH TIME ZONE,
+    timestamp2 TIMESTAMP(6) WITH TIME ZONE,
+    id1 VARCHAR(40),
+    id2 VARCHAR(40),
+    id3 VARCHAR(40),
+    id4 VARCHAR(40),
+    id5 DECIMAL(5,0),
+    rank TIMESTAMP(6) WITH TIME ZONE NOT NULL)
+PRIMARY INDEX ( key1, key2 )
