@@ -20,7 +20,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, ZoneOffset, ZonedDateTime}
 
-import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, LongColumnVector, TimestampColumnVector}
+import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, DoubleColumnVector, LongColumnVector, TimestampColumnVector}
 import org.apache.orc.TypeDescription
 
 
@@ -57,6 +57,19 @@ object Decoders {
 
     override def typeDescription: TypeDescription =
       TypeDescription.createLong
+  }
+
+  case class Float64Decoder() extends Decoder {
+    override def get(s: String, row: ColumnVector, i: Int): Unit = {
+      val double = s.toDouble
+      row.asInstanceOf[DoubleColumnVector].vector.update(i, double)
+    }
+
+    override def columnVector(maxSize: Int): ColumnVector =
+      new DoubleColumnVector(maxSize)
+
+    override def typeDescription: TypeDescription =
+      TypeDescription.createDouble
   }
 
   case class DateDecoder(format: String = "yyyy-MM-dd") extends Decoder {

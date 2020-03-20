@@ -19,7 +19,8 @@ package com.google.cloud.imf.bqcsv
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.auth.Credentials
 import com.google.cloud.RetryOption
-import com.google.cloud.bigquery._
+import com.google.cloud.bigquery.BigQuery.{TableField, TableOption}
+import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, BigQueryOptions, DatasetId, ExternalTableDefinition, Field, FieldList, FormatOptions, Job, JobId, JobInfo, JobStatus, LoadJobConfiguration, QueryJobConfiguration, Schema, StandardSQLTypeName, Table, TableId, TableInfo}
 import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableList
 import org.threeten.bp.Duration
@@ -36,18 +37,32 @@ object BQ extends Logging {
       .getService
   }
 
-  def configureLoadJob(cfg: BqCsvConfig): LoadJobConfiguration = {
+  def register(cfg: BqCsvConfig, bq: BigQuery): Option[ExternalTableDefinition] = {
+    val tableId = BQ.resolveTableSpec(cfg.destTableSpec, cfg.projectId, cfg.datasetId)
+    val sourceUri = cfg.stagingUri.stripSuffix("/") + "/*.orc"
+    val tblDef = ExternalTableDefinition.newBuilder(sourceUri, FormatOptions.orc).build
+    val tblInfo = TableInfo.newBuilder(tableId, tblDef)
+    if (cfg.lifetime > 0)
+      tblInfo.setExpirationTime(System.currentTimeMillis + cfg.lifetime)
+    bq.create(tblInfo.build)
+
+    Option(bq.getTable(tableId)).map(_.getDefinition[ExternalTableDefinition])
+  }
+
+  def configureLoadJob(cfg: BqCsvConfig, schema: Option[Schema]): LoadJobConfiguration = {
     val destinationTable = BQ.resolveTableSpec(cfg.destTableSpec, cfg.projectId, cfg.datasetId)
     val sourceUri = cfg.stagingUri.stripSuffix("/") + "/*.orc"
     logger.info(s"destination table=$destinationTable sourceUri=$sourceUri")
     val b = LoadJobConfiguration
       .newBuilder(destinationTable, sourceUri)
-      .setFormatOptions(FormatOptions.orc())
+      .setFormatOptions(FormatOptions.orc)
 
-    if (cfg.replace)
-      b.setWriteDisposition(JobInfo.WriteDisposition.WRITE_TRUNCATE)
-    else if (cfg.append)
+    schema.foreach(b.setSchema)
+
+    if (cfg.append)
       b.setWriteDisposition(JobInfo.WriteDisposition.WRITE_APPEND)
+    else if (cfg.replace)
+      b.setWriteDisposition(JobInfo.WriteDisposition.WRITE_TRUNCATE)
     else
       b.setWriteDisposition(JobInfo.WriteDisposition.WRITE_EMPTY)
 

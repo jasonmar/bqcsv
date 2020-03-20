@@ -18,7 +18,7 @@ package com.google.cloud.imf.bqcsv
 
 import com.google.cloud.bigquery.StandardSQLTypeName
 import com.google.cloud.bigquery.StandardSQLTypeName._
-import com.google.cloud.imf.bqcsv.Decoders.{DateDecoder, DecimalDecoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
+import com.google.cloud.imf.bqcsv.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
 
 object CliSchemaProvider {
   def fields(schema: String): Seq[String] =
@@ -90,6 +90,8 @@ object CliSchemaProvider {
           DecimalDecoder(precision,scale)
         case INT64 =>
           Int64Decoder()
+        case FLOAT64 =>
+          Float64Decoder()
         case t =>
           val msg = s"unsupported type $t"
           throw new RuntimeException(msg)
@@ -99,8 +101,9 @@ object CliSchemaProvider {
 }
 
 case class CliSchemaProvider(schema: String) extends SchemaProvider {
+  require(schema.nonEmpty, "schema not provided")
   import CliSchemaProvider._
-  val fields: Seq[SchemaField] = schema.split(',').map(fieldArgs)
-  override def fieldNames: Seq[String] = fields.map(_.name.toLowerCase)
-  override def decoders: Array[Decoder] = fields.map(_.decoder).toArray
+  val fields: Array[SchemaField] = schema.split(',').map(fieldArgs)
+  override val fieldNames: Seq[String] = fields.map(_.name.toLowerCase)
+  override val decoders: Array[Decoder] = fields.map(_.decoder)
 }

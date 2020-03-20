@@ -17,8 +17,8 @@
 package com.google.cloud.imf
 
 import com.google.auth.oauth2.GoogleCredentials
-import com.google.cloud.bigquery.{BigQuery, JobId, JobInfo}
-import com.google.cloud.imf.bqcsv._
+import com.google.cloud.bigquery.{BigQuery, ExternalTableDefinition, JobId, JobInfo, StandardTableDefinition, TableId, TableInfo}
+import com.google.cloud.imf.bqcsv.{BQ, BqCsvConfig, BqCsvConfigParser, CliSchemaProvider, GCS, Logging, NoOpMemoryManager, OrcAppender, SchemaProvider, SimpleGCSFileSystem, TableSchemaProvider, Util}
 import com.google.cloud.storage.Storage
 import com.google.rpc.{Code, Status}
 import org.apache.hadoop.conf.Configuration
@@ -45,50 +45,74 @@ object BqCsv extends Logging {
 
   def run(cfg: BqCsvConfig): Status = {
     val src = Source.fromFile(cfg.source, "UTF-8")
-    val credentials = GoogleCredentials.getApplicationDefault
+    val credentials = GoogleCredentials.getApplicationDefault.createScoped(Util.Scopes)
+    val bq: BigQuery = BQ.defaultClient(cfg.projectId, cfg.location, credentials)
+
+    // Get Schema from BigQuery Table
+    val templateTableId: TableId =
+      if (cfg.templateTableSpec.nonEmpty) {
+        logger.info(s"Getting schema from template table ${cfg.templateTableSpec}")
+        BQ.resolveTableSpec(cfg.templateTableSpec,cfg.projectId,cfg.datasetId)
+      } else {
+        logger.info(s"Getting schema from destination table ${cfg.destTableSpec}")
+        BQ.resolveTableSpec(cfg.destTableSpec,cfg.projectId,cfg.datasetId)
+      }
+    val table = Option(bq.getTable(templateTableId))
+    val schema = table.map(_.getDefinition[StandardTableDefinition].getSchema)
+
+    // Fall back to CLI schema if BigQuery Table doesn't exist
+    val sp = schema.map(TableSchemaProvider(_)).getOrElse(CliSchemaProvider(cfg.schema))
+
     try {
       val lines = src.getLines
       val gcs: Storage = GCS.defaultClient(credentials)
       val uri = new java.net.URI(cfg.stagingUri)
       if (cfg.replace) GCS.delete(gcs, uri)
       else GCS.assertEmpty(gcs, uri)
-      val rowCount = write(lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, cfg.schemaProvider, gcs)
+      val rowCount = write(lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp, gcs)
       logger.info(s"Wrote $rowCount rows")
     } finally {
       src.close
     }
 
-    // Submit Load job
-    val bq: BigQuery = BQ.defaultClient(cfg.projectId, cfg.location, credentials)
-    val loadJobConfig = BQ.configureLoadJob(cfg)
-    logger.info("Submitting load job")
-    logger.debug(loadJobConfig)
-    val jobId = JobId.of(s"bqcsv_load_${System.currentTimeMillis}")
-    val job = bq.create(JobInfo.of(jobId, loadJobConfig))
-    val completed = BQ.await(job, jobId, 3600)
-    logger.info("Load job completed")
-    logger.debug(completed)
-    BQ.getStatus(completed) match {
-      case Some(status) =>
-        logger.info(s"Load job ${jobId.getJob} has status ${status.state}")
-        if (status.hasError) {
-          val msg =
-            s"""Error:
-               |${status.error}
-               |${status.executionErrors.mkString("ExecutionErrors:\n","\n","")}""".stripMargin
-          logger.error(msg)
-          Status.newBuilder
-            .setMessage(msg)
-            .setCode(Code.CANCELLED_VALUE)
-            .build
-        } else
-          Status.newBuilder
-            .setCode(Code.OK_VALUE)
-            .build
-      case _ =>
-        Status.newBuilder
-          .setMessage("missing status")
-          .setCode(Code.NOT_FOUND_VALUE).build
+    if (cfg.external){
+      logger.info("Registering External Table")
+      BQ.register(cfg, bq) match {
+        case Some(tbl) =>
+          val msg = s"Registered External Table\n$tbl"
+          logger.info(msg)
+          Status.newBuilder.setMessage(msg).setCode(Code.OK_VALUE).build
+        case _ =>
+          val msg = s"Failed to register External Table ${cfg.destTableSpec}"
+          logger.info(msg)
+          Status.newBuilder.setMessage(msg).setCode(Code.OK_VALUE).build
+      }
+    } else {
+      // Submit Load job
+      val loadJobConfig = BQ.configureLoadJob(cfg, schema)
+      logger.info("Submitting load job")
+      logger.debug(loadJobConfig)
+      val jobId = JobId.of(s"bqcsv_load_${System.currentTimeMillis}")
+      val job = bq.create(JobInfo.of(jobId, loadJobConfig))
+      val completed = BQ.await(job, jobId, 3600)
+      logger.info("Load job completed")
+      logger.debug(completed)
+      BQ.getStatus(completed) match {
+        case Some(status) =>
+          logger.info(s"Load job ${jobId.getJob} has status ${status.state}")
+          if (status.hasError) {
+            val msg =
+              s"""Error:
+                 |${status.error}
+                 |${status.executionErrors.mkString("Execution Errors:\n","\n","")}""".stripMargin
+            logger.error(msg)
+            Status.newBuilder.setMessage(msg).setCode(Code.CANCELLED_VALUE).build
+          } else {
+            Status.newBuilder.setCode(Code.OK_VALUE).build
+          }
+        case _ =>
+          Status.newBuilder.setMessage("missing status").setCode(Code.NOT_FOUND_VALUE).build
+      }
     }
   }
 

@@ -20,13 +20,14 @@ case class BqCsvConfig(source: String = "",
                        delimiter: Char = 'þ',
                        stagingUri: String = "",
                        destTableSpec: String = "",
+                       templateTableSpec: String = "",
                        replace: Boolean = false,
                        append: Boolean = false,
+                       external: Boolean = false,
                        partSizeMB: Int = 128,
+                       lifetime: Long = 7L*24L*60L*60L*1000L,
                        projectId: String = "",
                        datasetId: String = "",
                        location: String = "US",
                        schema: String = "",
-                       schemaProvider: SchemaProvider = CliSchemaProvider(""),
-                       debug: Boolean = false
-                       )
+                       debug: Boolean = false)

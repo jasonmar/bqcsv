@@ -33,9 +33,8 @@ object BqCsvConfigParser extends OptionParser[BqCsvConfig]("bqcsv") {
   help("help").text("prints this usage text")
 
   opt[String]("schema")
-    .required
     .text("schema information in format <name>[:<type>][:<args>]\nexample: 'col1:STRING:24,col2:INT64,col3:TIMESTAMP:6,col4:DATE,col5:NUMERIC:9.2'")
-    .action{(x,c) => c.copy(schema = x, schemaProvider = CliSchemaProvider(x))}
+    .action{(x,c) => c.copy(schema = x)}
 
   // BigQuery Options
   opt[String]("dataset")
@@ -53,16 +52,35 @@ object BqCsvConfigParser extends OptionParser[BqCsvConfig]("bqcsv") {
     .text("(optional) BigQuery region (default: US)")
     .action((x,c) => c.copy(location = x))
 
+  opt[Long]("lifetime")
+    .optional
+    .text("(optional) table lifetime in milliseconds (default: 7 days)")
+    .action((x,c) => c.copy(lifetime = x))
+
   opt[Unit]("replace")
     .optional
     .action{(_,c) => c.copy(replace = true)}
     .text("(optional) delete existing ORC file in GCS, if present, and overwrite existing BigQuery table")
 
+  opt[Unit]("append")
+    .optional
+    .action{(_,c) => c.copy(append = true)}
+    .text("(optional) append to BigQuery table")
+
+  opt[Unit]("external")
+    .optional
+    .action{(_,c) => c.copy(external = true)}
+    .text("(optional) register as BigQuery External Table instead of loading")
+
   opt[String]("delimiter")
     .optional
     .text("(optional) delimiter character")
     .action{(x,c) => c.copy(delimiter = x.head)}
-    .validate(x => if (x.length == 1) success else failure("delimiter must be a single character"))
+
+  opt[String]("templateTableSpec")
+    .optional
+    .text("(optional) TableSpec of BigQuery table to use as schema template in format [project:][dataset:]table")
+    .action{(x,c) => c.copy(templateTableSpec = x)}
 
   opt[Unit]("debug")
     .optional
@@ -95,7 +113,7 @@ object BqCsvConfigParser extends OptionParser[BqCsvConfig]("bqcsv") {
 
   arg[String]("tableSpec")
     .required
-    .text("BigQuery table to be loaded")
+    .text("BigQuery table to be loaded in format [project:][dataset:]table")
     .validate(x =>
       if (x.length < 3) failure(s"invalid tablespec $x")
       else success
