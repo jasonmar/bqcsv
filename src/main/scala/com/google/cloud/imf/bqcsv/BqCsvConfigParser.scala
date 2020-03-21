@@ -33,19 +33,20 @@ object BqCsvConfigParser extends OptionParser[BqCsvConfig]("bqcsv") {
   help("help").text("prints this usage text")
 
   opt[String]("schema")
-    .text("schema information in format <name>[:<type>][:<args>]\nexample: 'col1:STRING:24,col2:INT64,col3:TIMESTAMP:6,col4:DATE,col5:NUMERIC:9.2'")
+    .optional
+    .text("(optional) schema information in format <name>[:<type>][:<args>],...\nexample: 'col1:STRING:24,col2:INT64,col3:TIMESTAMP:6,col4:DATE,col5:NUMERIC:9.2'")
     .action{(x,c) => c.copy(schema = x)}
-
-  // BigQuery Options
-  opt[String]("dataset")
-    .required
-    .text("Default BigQuery dataset in format [PROJECT_ID]:DATASET")
-    .action((x,c) => c.copy(datasetId = x))
 
   opt[String]("project")
     .required
     .text("Project ID used for BigQuery requests")
     .action((x,c) => c.copy(projectId = x))
+
+  // BigQuery Options
+  opt[String]("dataset")
+    .required
+    .text("Default BigQuery Dataset in format [PROJECT_ID]:DATASET")
+    .action((x,c) => c.copy(datasetId = x))
 
   opt[String]("location")
     .optional

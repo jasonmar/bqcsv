@@ -19,7 +19,6 @@ package com.google.cloud.imf.bqcsv
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.auth.Credentials
 import com.google.cloud.RetryOption
-import com.google.cloud.bigquery.BigQuery.{TableField, TableOption}
 import com.google.cloud.bigquery.{BigQuery, BigQueryError, BigQueryException, BigQueryOptions, DatasetId, ExternalTableDefinition, Field, FieldList, FormatOptions, Job, JobId, JobInfo, JobStatus, LoadJobConfiguration, QueryJobConfiguration, Schema, StandardSQLTypeName, Table, TableId, TableInfo}
 import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableList
