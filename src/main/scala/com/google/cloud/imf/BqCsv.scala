@@ -68,7 +68,7 @@ object BqCsv extends Logging {
       val uri = new java.net.URI(cfg.stagingUri)
       val sp: SchemaProvider =
         if (cfg.autodetect){
-          AutoDetectProvider.get(cfg, sample)
+          AutoDetectProvider.get(cfg, sample, schema)
         } else if (cfg.templateTableSpec.nonEmpty) {
           if (schema.isEmpty)
             throw new RuntimeException(s"template table ${cfg.templateTableSpec} doesn't exist")

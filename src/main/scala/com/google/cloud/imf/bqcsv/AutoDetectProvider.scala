@@ -16,13 +16,12 @@
 
 package com.google.cloud.imf.bqcsv
 
-class AutoDetectProvider(schema: String,
+import com.google.cloud.bigquery.Schema
+
+class AutoDetectProvider(override val fieldNames: Seq[String],
                          delimiter: Char,
                          sample: Array[String],
                          defaultOffset: Int) extends SchemaProvider {
-  override def fieldNames: Seq[String] =
-    if (schema.nonEmpty) schema.split(delimiter)
-    else sample.head.split(delimiter).indices.map(AutoDetectProvider.colname)
   override val decoders: Array[Decoder] = {
     val rows = sample.map(_.split(delimiter))
     val cols = fieldNames.indices.map{i => rows.map(_.lift(i).getOrElse(""))}
@@ -43,8 +42,17 @@ object AutoDetectProvider {
     }
   }
 
-  def get(cfg: BqCsvConfig, sample: Array[String]): SchemaProvider = {
-    val sp = new AutoDetectProvider(cfg.schema,
+  def get(cfg: BqCsvConfig, sample: Array[String], schema: Option[Schema]): SchemaProvider = {
+    import scala.jdk.CollectionConverters.IterableHasAsScala
+    val fieldNames =
+      schema
+        .map(_.getFields.asScala.map(_.getName).toArray.toSeq)
+        .getOrElse(
+          if (cfg.schema.nonEmpty) cfg.schema.split(',').toSeq
+          else sample.head.split(cfg.delimiter).indices.map(AutoDetectProvider.colname)
+        )
+
+    val sp = new AutoDetectProvider(fieldNames,
       cfg.delimiter,
       sample,
       cfg.timezone)
