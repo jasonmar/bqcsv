@@ -96,17 +96,22 @@ object SchemaInference {
     else None
   }
 
+  def getMaxLength(data: Array[String]): Int = {
+    data.map(_.length).max
+  }
+
   def inferType(sample: Array[String], defaultOffset: Int): Decoder = {
     val col = sample.map(_.trim)
+    val maxLength = getMaxLength(col)
     if (col.forall(isNumeric)){
       if (col.forall(isInt)){
         Int64Decoder()
       } else if (col.forall(_.length <= 18)) {
         val scale = getScale(col)
-        if (scale.isDefined)
-          DecimalDecoder(18,scale.get)
+        if (scale.isDefined && maxLength <= 18)
+          DecimalDecoder(maxLength,scale.get)
         else Float64Decoder()
-      } else StringDecoder()
+      } else StringDecoder(maxLength)
     } else if (col.forall(isZonedTimestamp)){
       TimestampDecoder(ZonedTimeStampPattern)
     } else if (col.forall(isTimestamp)) {
@@ -115,7 +120,7 @@ object SchemaInference {
       val fmt = dateFormat(col)
       if (fmt.isDefined){
         DateDecoder(fmt.get)
-      } else StringDecoder()
+      } else StringDecoder(maxLength)
     }
   }
 }

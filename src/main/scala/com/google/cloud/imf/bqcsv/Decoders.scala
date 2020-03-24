@@ -39,8 +39,7 @@ object Decoders {
     }
 
     override def typeDescription: TypeDescription =
-      if (length > 0) TypeDescription.createChar.withMaxLength(length)
-      else TypeDescription.createChar
+      TypeDescription.createChar.withMaxLength(length)
   }
 
   case class Int64Decoder() extends Decoder {
