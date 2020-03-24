@@ -73,6 +73,11 @@ object BqCsvConfigParser extends OptionParser[BqCsvConfig]("bqcsv") {
     .action{(_,c) => c.copy(external = true)}
     .text("(optional) register as BigQuery External Table instead of loading")
 
+  opt[Unit]("autodetect")
+    .optional
+    .action{(_,c) => c.copy(autodetect = true)}
+    .text("(optional) infer schema first 100 lines of file")
+
   opt[String]("delimiter")
     .optional
     .text("(optional) delimiter character")

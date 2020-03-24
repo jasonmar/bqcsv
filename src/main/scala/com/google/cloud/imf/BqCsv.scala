@@ -17,8 +17,9 @@
 package com.google.cloud.imf
 
 import com.google.auth.oauth2.GoogleCredentials
-import com.google.cloud.bigquery.{BigQuery, ExternalTableDefinition, JobId, JobInfo, StandardTableDefinition, TableId, TableInfo}
-import com.google.cloud.imf.bqcsv.{BQ, BqCsvConfig, BqCsvConfigParser, CliSchemaProvider, GCS, Logging, NoOpMemoryManager, OrcAppender, SchemaProvider, SimpleGCSFileSystem, TableSchemaProvider, Util}
+import com.google.cloud.bigquery.{BigQuery, JobId, JobInfo, StandardTableDefinition, TableId}
+import com.google.cloud.imf.bqcsv.{AutoDetectProvider, BQ, BqCsvConfig, BqCsvConfigParser, CliSchemaProvider, GCS,
+  Logging, NoOpMemoryManager, OrcAppender, SchemaProvider, SimpleGCSFileSystem, TableSchemaProvider, Util}
 import com.google.cloud.storage.Storage
 import com.google.rpc.{Code, Status}
 import org.apache.hadoop.conf.Configuration
@@ -60,16 +61,25 @@ object BqCsv extends Logging {
     val table = Option(bq.getTable(templateTableId))
     val schema = table.map(_.getDefinition[StandardTableDefinition].getSchema)
 
-    // Fall back to CLI schema if BigQuery Table doesn't exist
-    val sp = schema.map(TableSchemaProvider(_)).getOrElse(CliSchemaProvider(cfg.schema))
-
     try {
       val lines = src.getLines
-      val gcs: Storage = GCS.defaultClient(credentials)
+      val sample = lines.take(100).toArray
+      val gcs = GCS.defaultClient(credentials)
       val uri = new java.net.URI(cfg.stagingUri)
+      val sp: SchemaProvider =
+        if (cfg.autodetect){
+          AutoDetectProvider.get(cfg, sample)
+        } else if (cfg.templateTableSpec.nonEmpty) {
+          if (schema.isEmpty)
+            throw new RuntimeException(s"template table ${cfg.templateTableSpec} doesn't exist")
+          TableSchemaProvider(schema.get)
+        } else {
+          CliSchemaProvider(cfg.schema)
+        }
+
       if (cfg.replace) GCS.delete(gcs, uri)
       else GCS.assertEmpty(gcs, uri)
-      val rowCount = write(lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp, gcs)
+      val rowCount = write(sample.iterator ++ lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp, gcs)
       logger.info(s"Wrote $rowCount rows")
     } finally {
       src.close

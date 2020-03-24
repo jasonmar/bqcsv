@@ -16,7 +16,7 @@
 
 package com.google.cloud.imf.bqcsv
 
-import com.google.cloud.bigquery.{Field, Schema, StandardTableDefinition, Table}
+import com.google.cloud.bigquery.{BigQuery, Field, Schema, StandardTableDefinition, Table, TableId}
 import com.google.cloud.imf.bqcsv.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
 
 import scala.jdk.CollectionConverters.IterableHasAsScala
@@ -27,7 +27,7 @@ case class TableSchemaProvider(schema: Schema) extends SchemaProvider {
   override val decoders: Array[Decoder] = fields.map(TableSchemaProvider.decoder)
 }
 
-object TableSchemaProvider {
+object TableSchemaProvider extends Logging {
   def apply(table: Table): TableSchemaProvider = {
     val schema = table.getDefinition[StandardTableDefinition].getSchema
     TableSchemaProvider(schema)

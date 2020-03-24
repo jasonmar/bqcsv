@@ -28,11 +28,8 @@ object Decoders {
   case class StringDecoder(length: Int = -1) extends Decoder {
     override def get(s: String, row: ColumnVector, i: Int): Unit = {
       val bcv = row.asInstanceOf[BytesColumnVector]
-      val dest = bcv.getValPreallocatedBytes
-      val destPos = bcv.getValPreallocatedStart
       val bytes = s.getBytes(UTF_8)
-      System.arraycopy(bytes, 0, dest, destPos, bytes.length)
-      bcv.setValPreallocated(i, bytes.length)
+      bcv.setRef(i,bytes,0,bytes.length)
     }
 
     override def columnVector(maxSize: Int): ColumnVector = {
@@ -48,7 +45,7 @@ object Decoders {
 
   case class Int64Decoder() extends Decoder {
     override def get(s: String, row: ColumnVector, i: Int): Unit = {
-      val long = s.toLong
+      val long = s.trim.toLong
       row.asInstanceOf[LongColumnVector].vector.update(i, long)
     }
 
@@ -61,7 +58,7 @@ object Decoders {
 
   case class Float64Decoder() extends Decoder {
     override def get(s: String, row: ColumnVector, i: Int): Unit = {
-      val double = s.toDouble
+      val double = s.trim.toDouble
       row.asInstanceOf[DoubleColumnVector].vector.update(i, double)
     }
 
@@ -77,7 +74,7 @@ object Decoders {
 
     override def get(s: String, row: ColumnVector, i: Int): Unit = {
       val dcv = row.asInstanceOf[DateColumnVector]
-      val dt = LocalDate.from(fmt.parse(s)).toEpochDay
+      val dt = LocalDate.from(fmt.parse(s.trim)).toEpochDay
       dcv.vector.update(i, dt)
     }
 
@@ -93,7 +90,7 @@ object Decoders {
 
     override def get(s: String, row: ColumnVector, i: Int): Unit = {
       val tcv = row.asInstanceOf[TimestampColumnVector]
-      val timestamp = ZonedDateTime.from(fmt.parse(s))
+      val timestamp = ZonedDateTime.from(fmt.parse(s.trim))
       tcv.time.update(i, timestamp.toEpochSecond*1000L)
       tcv.nanos.update(i, 0)
     }
@@ -112,7 +109,7 @@ object Decoders {
 
     override def get(s: String, row: ColumnVector, i: Int): Unit = {
       val tcv = row.asInstanceOf[TimestampColumnVector]
-      val timestamp = LocalDateTime.from(fmt.parse(s)).atOffset(zoneOffset)
+      val timestamp = LocalDateTime.from(fmt.parse(s.trim)).atOffset(zoneOffset)
       tcv.time.update(i, timestamp.toEpochSecond*1000L)
       tcv.nanos.update(i, 0)
     }
@@ -129,7 +126,7 @@ object Decoders {
     require(scale >= 0 && scale < 38, s"invalid scale $scale")
     override def get(s: String, row: ColumnVector, i: Int): Unit = {
       val dcv = row.asInstanceOf[Decimal64ColumnVector]
-      val long = s.filter(c => c.isDigit || c == '-').toLong
+      val long = s.trim.filter(c => c.isDigit || c == '-').toLong
       dcv.vector.update(i, long)
     }
 
