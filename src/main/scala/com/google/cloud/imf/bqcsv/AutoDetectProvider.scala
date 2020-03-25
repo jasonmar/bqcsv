@@ -21,11 +21,11 @@ import com.google.cloud.bigquery.Schema
 class AutoDetectProvider(override val fieldNames: Seq[String],
                          delimiter: Char,
                          sample: Array[String],
-                         defaultOffset: Int) extends SchemaProvider {
+                         offset: Int) extends SchemaProvider {
   override val decoders: Array[Decoder] = {
     val rows = sample.map(_.split(delimiter))
     val cols = fieldNames.indices.map{i => rows.map(_.lift(i).getOrElse(""))}
-    cols.map(SchemaInference.inferType(_,defaultOffset)).toArray
+    cols.map(SchemaInference.inferType(_,offset)).toArray
   }
 
   def print: String = {
@@ -55,7 +55,7 @@ object AutoDetectProvider {
     val sp = new AutoDetectProvider(fieldNames,
       cfg.delimiter,
       sample,
-      cfg.timezone)
+      cfg.offset)
     System.out.println(s"inferred schema:\n${sp.print}")
     sp
   }

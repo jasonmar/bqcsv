@@ -57,7 +57,8 @@ example: 'col1:STRING:24,col2:INT64,col3:TIMESTAMP:6,col4:DATE,col5:NUMERIC:9.2'
   --replace                (optional) delete existing ORC file in GCS, if present, and overwrite existing BigQuery table
   --append                 (optional) append to BigQuery table
   --external               (optional) register as BigQuery External Table instead of loading
-  --autodetect             (optional) infer schema first 100 lines of file
+  --autodetect             (optional) infer schema from first 100 lines of file
+  --offset <value>         (optional) offset from GMT (default: 0)
   --delimiter <value>      (optional) delimiter character
   --templateTableSpec <value>
                            (optional) TableSpec of BigQuery table to use as schema template in format [project:][dataset:]table

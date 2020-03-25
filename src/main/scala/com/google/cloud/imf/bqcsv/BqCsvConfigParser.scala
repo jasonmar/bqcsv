@@ -76,7 +76,12 @@ object BqCsvConfigParser extends OptionParser[BqCsvConfig]("bqcsv") {
   opt[Unit]("autodetect")
     .optional
     .action{(_,c) => c.copy(autodetect = true)}
-    .text("(optional) infer schema first 100 lines of file")
+    .text("(optional) infer schema from first 100 lines of file")
+
+  opt[Int]("offset")
+    .optional
+    .action{(x,c) => c.copy(offset = x)}
+    .text("(optional) offset from GMT (default: 0)")
 
   opt[String]("delimiter")
     .optional
