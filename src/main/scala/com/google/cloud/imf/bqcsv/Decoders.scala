@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, ZoneOffset, ZonedDateTime}
 
+import com.google.cloud.bigquery.StandardSQLTypeName
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, DoubleColumnVector, LongColumnVector, TimestampColumnVector}
 import org.apache.orc.TypeDescription
 
@@ -40,6 +41,8 @@ object Decoders {
 
     override def typeDescription: TypeDescription =
       TypeDescription.createChar.withMaxLength(length)
+
+    override def bqType: StandardSQLTypeName = StandardSQLTypeName.STRING
   }
 
   case class Int64Decoder() extends Decoder {
@@ -53,6 +56,8 @@ object Decoders {
 
     override def typeDescription: TypeDescription =
       TypeDescription.createLong
+
+    override def bqType: StandardSQLTypeName = StandardSQLTypeName.INT64
   }
 
   case class Float64Decoder() extends Decoder {
@@ -66,6 +71,8 @@ object Decoders {
 
     override def typeDescription: TypeDescription =
       TypeDescription.createDouble
+
+    override def bqType: StandardSQLTypeName = StandardSQLTypeName.FLOAT64
   }
 
   case class DateDecoder(format: String = "yyyy-MM-dd") extends Decoder {
@@ -82,6 +89,8 @@ object Decoders {
 
     override def typeDescription: TypeDescription =
       TypeDescription.createDate
+
+    override def bqType: StandardSQLTypeName = StandardSQLTypeName.DATE
   }
 
   case class TimestampDecoder(format: String = "yyyy-MM-dd HH:mm:ssz") extends Decoder {
@@ -99,6 +108,8 @@ object Decoders {
 
     override def typeDescription: TypeDescription =
       TypeDescription.createTimestamp
+
+    override def bqType: StandardSQLTypeName = StandardSQLTypeName.TIMESTAMP
   }
 
   case class TimestampDecoder2(format: String = "yyyy-MM-dd HH:mm:ss", offset: Int) extends Decoder {
@@ -118,6 +129,8 @@ object Decoders {
 
     override def typeDescription: TypeDescription =
       TypeDescription.createTimestamp
+
+    override def bqType: StandardSQLTypeName = StandardSQLTypeName.TIMESTAMP
   }
 
   case class DecimalDecoder(precision: Int, scale: Int) extends Decoder {
@@ -136,5 +149,7 @@ object Decoders {
       TypeDescription.createDecimal
         .withScale(scale)
         .withPrecision(precision)
+
+    override def bqType: StandardSQLTypeName = StandardSQLTypeName.NUMERIC
   }
 }

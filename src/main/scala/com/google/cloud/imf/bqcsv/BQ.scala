@@ -48,15 +48,14 @@ object BQ extends Logging {
     Option(bq.getTable(tableId)).map(_.getDefinition[ExternalTableDefinition])
   }
 
-  def configureLoadJob(cfg: BqCsvConfig, schema: Option[Schema]): LoadJobConfiguration = {
+  def configureLoadJob(cfg: BqCsvConfig, schema: Schema): LoadJobConfiguration = {
     val destinationTable = BQ.resolveTableSpec(cfg.destTableSpec, cfg.projectId, cfg.datasetId)
     val sourceUri = cfg.stagingUri.stripSuffix("/") + "/*.orc"
     logger.info(s"destination table=$destinationTable sourceUri=$sourceUri")
     val b = LoadJobConfiguration
       .newBuilder(destinationTable, sourceUri)
       .setFormatOptions(FormatOptions.orc)
-
-    schema.foreach(b.setSchema)
+      .setSchema(schema)
 
     if (cfg.append)
       b.setWriteDisposition(JobInfo.WriteDisposition.WRITE_APPEND)

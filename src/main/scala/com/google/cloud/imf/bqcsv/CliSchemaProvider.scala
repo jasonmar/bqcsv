@@ -16,7 +16,7 @@
 
 package com.google.cloud.imf.bqcsv
 
-import com.google.cloud.bigquery.StandardSQLTypeName
+import com.google.cloud.bigquery.{Field, Schema, StandardSQLTypeName}
 import com.google.cloud.bigquery.StandardSQLTypeName._
 import com.google.cloud.imf.bqcsv.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
 
@@ -106,4 +106,11 @@ case class CliSchemaProvider(schema: String) extends SchemaProvider {
   val fields: Array[SchemaField] = schema.split(',').map(fieldArgs)
   override val fieldNames: Seq[String] = fields.map(_.name.toLowerCase)
   override val decoders: Array[Decoder] = fields.map(_.decoder)
+
+  override def bqSchema: Schema = {
+    import scala.jdk.CollectionConverters.IterableHasAsJava
+    val f = fieldNames.zip(decoders)
+      .map{x => Field.newBuilder(x._1, x._2.bqType).build}.asJava
+    Schema.of(f)
+  }
 }

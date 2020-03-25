@@ -16,6 +16,7 @@
 
 package com.google.cloud.imf.bqcsv
 
+import com.google.cloud.bigquery.StandardSQLTypeName
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector
 import org.apache.orc.TypeDescription
 
@@ -31,4 +32,6 @@ trait Decoder {
   def columnVector(maxSize: Int): ColumnVector
 
   def typeDescription: TypeDescription
+
+  def bqType: StandardSQLTypeName
 }

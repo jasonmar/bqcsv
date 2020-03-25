@@ -16,6 +16,7 @@
 
 package com.google.cloud.imf.bqcsv
 
+import com.google.cloud.bigquery.Schema
 import org.apache.orc.TypeDescription
 import org.apache.orc.TypeDescription.Category
 
@@ -29,6 +30,8 @@ trait SchemaProvider {
       .foldLeft(new TypeDescription(Category.STRUCT)){(a,b) =>
           a.addField(b._1,b._2.typeDescription)
       }
+
+  def bqSchema: Schema
 
   override def toString: String = ORCSchema.toJson
 }

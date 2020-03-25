@@ -17,9 +17,8 @@
 package com.google.cloud.imf
 
 import com.google.auth.oauth2.GoogleCredentials
-import com.google.cloud.bigquery.{BigQuery, JobId, JobInfo, StandardTableDefinition, TableId}
-import com.google.cloud.imf.bqcsv.{AutoDetectProvider, BQ, BqCsvConfig, BqCsvConfigParser, CliSchemaProvider, GCS,
-  Logging, NoOpMemoryManager, OrcAppender, SchemaProvider, SimpleGCSFileSystem, TableSchemaProvider, Util}
+import com.google.cloud.bigquery.{BigQuery, ExternalTableDefinition, JobId, JobInfo, StandardTableDefinition, TableId}
+import com.google.cloud.imf.bqcsv.{AutoDetectProvider, BQ, BqCsvConfig, BqCsvConfigParser, CliSchemaProvider, GCS, Logging, NoOpMemoryManager, OrcAppender, SchemaProvider, SimpleGCSFileSystem, TableSchemaProvider, Util}
 import com.google.cloud.storage.Storage
 import com.google.rpc.{Code, Status}
 import org.apache.hadoop.conf.Configuration
@@ -48,6 +47,7 @@ object BqCsv extends Logging {
     val src = Source.fromFile(cfg.source, "UTF-8")
     val credentials = GoogleCredentials.getApplicationDefault.createScoped(Util.Scopes)
     val bq: BigQuery = BQ.defaultClient(cfg.projectId, cfg.location, credentials)
+    val destTableId = BQ.resolveTableSpec(cfg.destTableSpec,cfg.projectId,cfg.datasetId)
 
     // Get Schema from BigQuery Table
     val templateTableId: TableId =
@@ -56,27 +56,37 @@ object BqCsv extends Logging {
         BQ.resolveTableSpec(cfg.templateTableSpec,cfg.projectId,cfg.datasetId)
       } else {
         logger.info(s"Getting schema from destination table ${cfg.destTableSpec}")
-        BQ.resolveTableSpec(cfg.destTableSpec,cfg.projectId,cfg.datasetId)
+        destTableId
       }
     val table = Option(bq.getTable(templateTableId))
+
+    // delete destination table if it is an external table
+    if (cfg.replace){
+      Option(bq.getTable(destTableId)) match {
+        case Some(tbl) if tbl.getDefinition.isInstanceOf[ExternalTableDefinition] =>
+          logger.info(s"Deleting external table ${destTableId.getDataset}.${destTableId.getTable}")
+          bq.delete(destTableId)
+        case _ =>
+      }
+    }
     val schema = table.map(_.getDefinition[StandardTableDefinition].getSchema)
 
-    try {
-      val lines = src.getLines
-      val sample = lines.take(100).toArray
-      val gcs = GCS.defaultClient(credentials)
-      val uri = new java.net.URI(cfg.stagingUri)
-      val sp: SchemaProvider =
-        if (cfg.autodetect){
-          AutoDetectProvider.get(cfg, sample, schema)
-        } else if (cfg.templateTableSpec.nonEmpty) {
-          if (schema.isEmpty)
-            throw new RuntimeException(s"template table ${cfg.templateTableSpec} doesn't exist")
-          TableSchemaProvider(schema.get)
-        } else {
-          CliSchemaProvider(cfg.schema)
-        }
+    val lines = src.getLines
+    val sample = lines.take(100).toArray
+    val gcs = GCS.defaultClient(credentials)
+    val uri = new java.net.URI(cfg.stagingUri)
+    val sp: SchemaProvider =
+      if (cfg.autodetect){
+        AutoDetectProvider.get(cfg, sample, schema)
+      } else if (cfg.templateTableSpec.nonEmpty) {
+        if (schema.isEmpty)
+          throw new RuntimeException(s"template table ${cfg.templateTableSpec} doesn't exist")
+        TableSchemaProvider(schema.get)
+      } else {
+        CliSchemaProvider(cfg.schema)
+      }
 
+    try {
       if (cfg.replace) GCS.delete(gcs, uri)
       else GCS.assertEmpty(gcs, uri)
       val rowCount = write(sample.iterator ++ lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp, gcs)
@@ -99,7 +109,7 @@ object BqCsv extends Logging {
       }
     } else {
       // Submit Load job
-      val loadJobConfig = BQ.configureLoadJob(cfg, schema)
+      val loadJobConfig = BQ.configureLoadJob(cfg, sp.bqSchema)
       logger.info("Submitting load job")
       logger.debug(loadJobConfig)
       val jobId = JobId.of(s"bqcsv_load_${System.currentTimeMillis}")

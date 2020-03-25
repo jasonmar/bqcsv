@@ -16,12 +16,13 @@
 
 package com.google.cloud.imf.bqcsv
 
-import com.google.cloud.bigquery.Schema
+import com.google.cloud.bigquery.{Field, Schema}
 
 class AutoDetectProvider(override val fieldNames: Seq[String],
                          delimiter: Char,
                          sample: Array[String],
-                         offset: Int) extends SchemaProvider {
+                         offset: Int,
+                         template: Option[Schema]) extends SchemaProvider {
   override val decoders: Array[Decoder] = {
     val rows = sample.map(_.split(delimiter))
     val cols = fieldNames.indices.map{i => rows.map(_.lift(i).getOrElse(""))}
@@ -30,6 +31,21 @@ class AutoDetectProvider(override val fieldNames: Seq[String],
 
   def print: String = {
     fieldNames.zip(decoders).map{x => s"${x._1} -> ${x._2}"}.mkString("\n")
+  }
+
+  override def bqSchema: Schema = {
+    import scala.jdk.CollectionConverters.{IterableHasAsJava,IterableHasAsScala}
+    val descriptions = template
+      .map(_.getFields.asScala.map(x => (x.getName.toLowerCase,x.getDescription)).toMap)
+      .getOrElse(Map.empty)
+    val f = fieldNames.zip(decoders)
+      .map{x =>
+        val b = Field.newBuilder(x._1, x._2.bqType)
+        descriptions.get(x._1.toLowerCase).foreach(b.setDescription)
+        b.build
+      }
+      .asJava
+    Schema.of(f)
   }
 }
 
@@ -52,10 +68,7 @@ object AutoDetectProvider {
           else sample.head.split(cfg.delimiter).indices.map(AutoDetectProvider.colname)
         )
 
-    val sp = new AutoDetectProvider(fieldNames,
-      cfg.delimiter,
-      sample,
-      cfg.offset)
+    val sp = new AutoDetectProvider(fieldNames, cfg.delimiter, sample, cfg.offset, schema)
     System.out.println(s"inferred schema:\n${sp.print}")
     sp
   }
