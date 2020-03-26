@@ -40,7 +40,7 @@ object BqCsv extends Logging {
     }
   }
 
-  final val MegaByte: Long = 1024*1024*1024
+  final val MegaByte: Long = 1024*1024
   final val OptimalCompressBuffer: Int = 32*1024
 
   def run(cfg: BqCsvConfig): Status = {
