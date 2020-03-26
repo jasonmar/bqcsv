@@ -60,21 +60,28 @@ object BqCsv extends Logging {
       }
     val table = Option(bq.getTable(templateTableId))
 
-    // delete destination table if it is an external table
-    if (cfg.replace){
-      Option(bq.getTable(destTableId)) match {
-        case Some(tbl) if tbl.getDefinition.isInstanceOf[ExternalTableDefinition] =>
-          logger.info(s"Deleting external table ${destTableId.getDataset}.${destTableId.getTable}")
-          bq.delete(destTableId)
-        case _ =>
-      }
-    }
     val schema = table.map(_.getDefinition[StandardTableDefinition].getSchema)
 
     val lines = src.getLines
     val sample = lines.take(100).toArray
     val gcs = GCS.defaultClient(credentials)
     val uri = new java.net.URI(cfg.stagingUri)
+
+    // delete destination table if it is an external table
+    val destTable = Option(bq.getTable(destTableId))
+    if (cfg.replace){
+      GCS.delete(gcs, uri)
+      destTable match {
+        case Some(tbl) if tbl.getDefinition.isInstanceOf[ExternalTableDefinition] =>
+          logger.info(s"Deleting external table ${destTableId.getDataset}.${destTableId.getTable}")
+          bq.delete(destTableId)
+        case _ =>
+      }
+    } else {
+      GCS.assertEmpty(gcs, uri)
+      assert(destTable.isEmpty)
+    }
+
     val sp: SchemaProvider =
       if (cfg.autodetect){
         AutoDetectProvider.get(cfg, sample, schema)
@@ -86,14 +93,9 @@ object BqCsv extends Logging {
         CliSchemaProvider(cfg.schema)
       }
 
-    try {
-      if (cfg.replace) GCS.delete(gcs, uri)
-      else GCS.assertEmpty(gcs, uri)
-      val rowCount = write(sample.iterator ++ lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp, gcs)
-      logger.info(s"Wrote $rowCount rows")
-    } finally {
-      src.close
-    }
+    val rowCount = write(sample.iterator ++ lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp, gcs)
+    src.close
+    logger.info(s"Wrote $rowCount rows")
 
     if (cfg.external){
       logger.info("Registering External Table")
