@@ -83,6 +83,12 @@ object BqCsvConfigParser extends OptionParser[BqCsvConfig]("bqcsv") {
     .action{(x,c) => c.copy(offset = x)}
     .text("(optional) offset from GMT (default: 0)")
 
+  opt[Int]("parallelism")
+    .optional
+    .action{(x,c) => c.copy(parallelism = x)}
+    .text("(optional) parallelism (default: 1)")
+    .validate(x => if (x > 0) success else failure("parallelism must be positive"))
+
   opt[String]("delimiter")
     .optional
     .text("(optional) delimiter character")

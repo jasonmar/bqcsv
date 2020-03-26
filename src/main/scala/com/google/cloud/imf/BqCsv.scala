@@ -16,6 +16,8 @@
 
 package com.google.cloud.imf
 
+import java.util.concurrent.{Callable, ExecutorService, Executors}
+
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bigquery.{BigQuery, ExternalTableDefinition, JobId, JobInfo, StandardTableDefinition, TableId}
 import com.google.cloud.imf.bqcsv.{AutoDetectProvider, BQ, BqCsvConfig, BqCsvConfigParser, CliSchemaProvider, GCS, Logging, NoOpMemoryManager, OrcAppender, SchemaProvider, SimpleGCSFileSystem, TableSchemaProvider, Util}
@@ -25,6 +27,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.orc.{CompressionKind, OrcConf, OrcFile}
 
+import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 
 object BqCsv extends Logging {
@@ -93,7 +96,12 @@ object BqCsv extends Logging {
         CliSchemaProvider(cfg.schema)
       }
 
-    val rowCount = write(sample.iterator ++ lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp, gcs)
+    val executorService =
+      if (cfg.parallelism > 1) Option(Executors.newWorkStealingPool(cfg.parallelism))
+      else None
+
+    val rowCount = write(sample.iterator ++ lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp, gcs,
+      cfg.parallelism, executorService)
     src.close
     logger.info(s"Wrote $rowCount rows")
 
@@ -143,7 +151,9 @@ object BqCsv extends Logging {
             delimiter: Char,
             baseUri: java.net.URI,
             schemaProvider: SchemaProvider,
-            gcs: Storage): Long = {
+            gcs: Storage,
+            parallelism: Int = 4,
+            executor: Option[ExecutorService] = None): Long = {
     val orcConfig = {
       val c = new Configuration(false)
       OrcConf.COMPRESS.setString(c, "ZLIB")
@@ -164,8 +174,45 @@ object BqCsv extends Logging {
       .enforceBufferSize
       .fileSystem(new SimpleGCSFileSystem(gcs, stats))
 
-    val orc = new OrcAppender(schemaProvider, delimiter, writerOptions, partSize, baseUri, stats)
+    val batchSize = 1024
 
-    orc.append(lines)
+    val parallelism = 4
+    val appenders = (0 until parallelism).map{i =>
+      val id = i.toString
+      new OrcAppender(schemaProvider, delimiter, writerOptions, partSize, baseUri, stats, id, batchSize)
+    }
+
+    var i = 0
+    var rows = 0L
+    val buf = new ArrayBuffer[java.util.concurrent.Future[Long]]()
+    while (lines.hasNext){
+      val superBatch = lines.take(128*batchSize).toArray
+      rows += superBatch.length
+      val orc = appenders(i % parallelism)
+      if (executor.isDefined)
+        buf.append(executor.get.submit(new AppendRunnable(orc, superBatch)))
+      else
+        orc.append(superBatch.iterator)
+
+      if (i % 1000 == 0){
+        val incomplete = buf.filterNot(_.isDone)
+        buf.clear
+        buf.appendAll(incomplete)
+      }
+      i += 1
+    }
+
+    val incomplete = buf.filterNot(_.isDone)
+    buf.clear
+    buf.appendAll(incomplete)
+
+    while (buf.exists(!_.isDone))
+      Thread.sleep(1000)
+
+    rows
+  }
+
+  private class AppendRunnable(orc: OrcAppender, lines: Array[String]) extends Callable[Long] {
+    override def call(): Long = orc.append(lines.iterator)
   }
 }

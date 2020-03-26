@@ -59,6 +59,7 @@ example: 'col1:STRING:24,col2:INT64,col3:TIMESTAMP:6,col4:DATE,col5:NUMERIC:9.2'
   --external               (optional) register as BigQuery External Table instead of loading
   --autodetect             (optional) infer schema from first 100 lines of file
   --offset <value>         (optional) offset from GMT (default: 0)
+  --parallelism <value>    (optional) parallelism (default: 1)
   --delimiter <value>      (optional) delimiter character
   --templateTableSpec <value>
                            (optional) TableSpec of BigQuery table to use as schema template in format [project:][dataset:]table
@@ -259,6 +260,25 @@ integer field
 double field
 
 `name:FLOAT64`
+
+
+## Working with TIMESTAMP columns
+
+All timestamps are stored as UTC.
+In order to view a timestamp in a different timezone, 
+use the [STRING Standard SQL Function](https://cloud.google.com/bigquery/docs/reference/standard-sql/timestamp_functions#string)          
+
+Example:
+
+```
+SELECT STRING(TIMESTAMP "2020-03-26 15:30:00", "America/Los_Angeles") as string;
+
++-------------------------------+
+| string                        |
++-------------------------------+
+| 2020-03-26 07:30:00-08        |
++-------------------------------+
+```
 
 
 ## Disclaimer

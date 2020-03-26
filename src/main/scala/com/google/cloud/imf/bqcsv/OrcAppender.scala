@@ -33,6 +33,7 @@ import org.apache.orc.{OrcFile, Writer}
  * @param partSize partition size in bytes
  * @param baseUri gs://bucket/prefix
  * @param stats FileSystem.Statistics used to track partition size
+ * @param id appender id
  * @param batchSize size of ORC VectorizedRowBatch
  */
 class OrcAppender(schemaProvider: SchemaProvider,
@@ -41,12 +42,14 @@ class OrcAppender(schemaProvider: SchemaProvider,
                   partSize: Long,
                   baseUri: URI,
                   stats: FileSystem.Statistics,
+                  id: String,
                   batchSize: Int = 1024) extends Logging {
   private var partId: Int = 0
+  private var rowCount: Long = 0
   private def partPath(): Path = {
     val bucket = baseUri.getAuthority
     val prefix = baseUri.getPath.stripPrefix("/")
-    val path = new Path(s"gs://$bucket/$prefix/part-$partId.orc")
+    val path = new Path(s"gs://$bucket/$prefix/part-$id-$partId.orc")
     partId += 1
     path
   }
@@ -58,52 +61,54 @@ class OrcAppender(schemaProvider: SchemaProvider,
       batch.cols(i) = cols(i)
     batch
   }
+  private var partWriter = {
+    val path = partPath()
+    OrcFile.createWriter(path, writerOptions)
+  }
+
+  private def newPart(): Unit = {
+    if (partWriter != null)
+      partWriter.close()
+    val path = partPath()
+    partWriter = OrcFile.createWriter(path, writerOptions)
+    stats.reset()
+  }
 
   /** Append records to partitioned ORC file
    *
    * @param lines Iterator containing lines of data
    * @return row count
    */
-  def append(lines: Iterator[String]): Long = {
-    var rowCount = 0L
+  def append(lines: Iterator[String]): Long = synchronized{
+    var rows = 0L
     while (lines.hasNext){
-      val path = partPath()
-      val partWriter = OrcFile.createWriter(path, writerOptions)
-
-      while (stats.getBytesWritten < partSize && lines.hasNext){
-        rowCount += append(lines, partWriter)
-      }
-      stats.reset()
+      rows += append(lines.take(batchSize), partWriter)
+      rowCount += rows
+      if (stats.getBytesWritten >= partSize)
+        newPart()
     }
-    rowCount
+    rows
   }
 
   /** Append records to ORC partition
    *
-   * @param lines Iterator containing lines of data
+   * @param batch Iterator containing lines of data
    * @param partWriter ORC Writer for single output partition
    * @return row count
    */
-  def append(lines: Iterator[String], partWriter: Writer): Long = {
+  private def append(batch: Iterator[String], partWriter: Writer): Long = {
     var rows: Long = 0
-    try {
-      while (lines.hasNext && stats.getBytesWritten < partSize) {
-        rowBatch.reset()
-        val batch = lines.take(batchSize)
-        val rowId = OrcAppender.acceptBatch(batch, decoders, cols, delimiter)
-        if (rowId == 0)
-          rowBatch.endOfFile = true
-        rowBatch.size = rowId
-        rows += rowId
-        partWriter.addRowBatch(rowBatch)
-        partWriter match {
-          case w: WriterImpl =>
-            w.checkMemory(1.0d)
-          case _ =>
-        }
-      }
-    } finally {
-      partWriter.close()
+    rowBatch.reset()
+    val rowId = OrcAppender.acceptBatch(batch, decoders, cols, delimiter)
+    if (rowId == 0)
+      rowBatch.endOfFile = true
+    rowBatch.size = rowId
+    rows += rowId
+    partWriter.addRowBatch(rowBatch)
+    partWriter match {
+      case w: WriterImpl =>
+        w.checkMemory(1.0d)
+      case _ =>
     }
     rows
   }
@@ -118,7 +123,7 @@ object OrcAppender {
    * @param rowId index within ColumnVector to store decoded value
    */
   @inline
-  final def appendColumn(field: String, decoder: Decoder, col: ColumnVector, rowId: Int): Unit =
+  private final def appendColumn(field: String, decoder: Decoder, col: ColumnVector, rowId: Int): Unit =
     decoder.get(field, col, rowId)
 
   /** Read
@@ -127,7 +132,7 @@ object OrcAppender {
    * @param cols Array[ColumnVector] to receive Decoder output
    * @param rowId index within the batch
    */
-  final def acceptRow(line: String,
+  private final def acceptRow(line: String,
                       decoders: Array[Decoder],
                       cols: Array[ColumnVector],
                       rowId: Int,
@@ -153,7 +158,7 @@ object OrcAppender {
    * @param cols VectorizedRowBatch
    * @return rowId
    */
-  final def acceptBatch(lines: Iterator[String],
+  private final def acceptBatch(lines: Iterator[String],
                         decoders: Array[Decoder],
                         cols: Array[ColumnVector],
                         delimiter: Char): Int = {
@@ -167,8 +172,9 @@ object OrcAppender {
           case e: Exception =>
             System.err.println(s"failed on row $rowId\n$line")
             throw e
+        } finally {
+          rowId += 1
         }
-        rowId += 1
       }
     } catch {
       case _: NoSuchElementException =>
