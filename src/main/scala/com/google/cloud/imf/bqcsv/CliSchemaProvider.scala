@@ -16,8 +16,8 @@
 
 package com.google.cloud.imf.bqcsv
 
-import com.google.cloud.bigquery.{Field, Schema, StandardSQLTypeName}
 import com.google.cloud.bigquery.StandardSQLTypeName._
+import com.google.cloud.bigquery.{Field, Schema, StandardSQLTypeName}
 import com.google.cloud.imf.bqcsv.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
 
 object CliSchemaProvider {

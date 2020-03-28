@@ -34,7 +34,7 @@ class AutoDetectProvider(override val fieldNames: Seq[String],
   }
 
   override def bqSchema: Schema = {
-    import scala.jdk.CollectionConverters.{IterableHasAsJava,IterableHasAsScala}
+    import scala.jdk.CollectionConverters.{IterableHasAsJava, IterableHasAsScala}
     val descriptions = template
       .map(_.getFields.asScala.map(x => (x.getName.toLowerCase,x.getDescription)).toMap)
       .getOrElse(Map.empty)

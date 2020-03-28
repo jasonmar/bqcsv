@@ -16,12 +16,13 @@
 
 package com.google.cloud.imf
 
-import java.util.concurrent.{Callable, ExecutorService, Executors}
+import java.util.concurrent.{ArrayBlockingQueue, Callable, ExecutorService, Executors, TimeUnit}
 
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bigquery.{BigQuery, ExternalTableDefinition, JobId, JobInfo, StandardTableDefinition, TableId}
 import com.google.cloud.imf.bqcsv.{AutoDetectProvider, BQ, BqCsvConfig, BqCsvConfigParser, CliSchemaProvider, GCS, Logging, NoOpMemoryManager, OrcAppender, SchemaProvider, SimpleGCSFileSystem, TableSchemaProvider, Util}
 import com.google.cloud.storage.Storage
+import com.google.common.collect.Queues
 import com.google.rpc.{Code, Status}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
@@ -96,12 +97,10 @@ object BqCsv extends Logging {
         CliSchemaProvider(cfg.schema)
       }
 
-    val executorService =
-      if (cfg.parallelism > 1) Option(Executors.newWorkStealingPool(cfg.parallelism))
-      else None
+    val executorService = Executors.newFixedThreadPool(cfg.parallelism)
 
     val rowCount = write(sample.iterator ++ lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp, gcs,
-      cfg.parallelism, executorService)
+      executorService, cfg.parallelism)
     src.close
     logger.info(s"Wrote $rowCount rows")
 
@@ -152,8 +151,8 @@ object BqCsv extends Logging {
             baseUri: java.net.URI,
             schemaProvider: SchemaProvider,
             gcs: Storage,
-            parallelism: Int = 4,
-            executor: Option[ExecutorService] = None): Long = {
+            executor: ExecutorService,
+            parallelism: Int = 4): Long = {
     val orcConfig = {
       val c = new Configuration(false)
       OrcConf.COMPRESS.setString(c, "ZLIB")
@@ -175,44 +174,52 @@ object BqCsv extends Logging {
       .fileSystem(new SimpleGCSFileSystem(gcs, stats))
 
     val batchSize = 1024
-
-    val parallelism = 4
-    val appenders = (0 until parallelism).map{i =>
+    val indices = (0 until parallelism).toArray
+    val appenders = indices.map{i =>
       val id = i.toString
       new OrcAppender(schemaProvider, delimiter, writerOptions, partSize, baseUri, stats, id, batchSize)
     }
+    val queues = indices.map(_ => Queues.newArrayBlockingQueue[Array[String]](64))
+    val futures = indices
+      .map{i => new AppendRunnable(appenders(i), queues(i))}
+      .map(executor.submit(_))
 
     var i = 0
     var rows = 0L
-    val buf = new ArrayBuffer[java.util.concurrent.Future[Long]]()
     while (lines.hasNext){
-      val superBatch = lines.take(128*batchSize).toArray
-      rows += superBatch.length
-      val orc = appenders(i % parallelism)
-      if (executor.isDefined)
-        buf.append(executor.get.submit(new AppendRunnable(orc, superBatch)))
-      else
-        orc.append(superBatch.iterator)
-
-      if (i % 1000 == 0){
-        val incomplete = buf.filterNot(_.isDone)
-        buf.clear
-        buf.appendAll(incomplete)
-      }
+      val batch = lines.take(batchSize).toArray
+      queues(i).put(batch)
+      rows += batch.length
       i += 1
+      if (i >= parallelism)
+        i = 0
     }
+    queues.foreach(_.put(Array.empty))
 
-    val incomplete = buf.filterNot(_.isDone)
-    buf.clear
-    buf.appendAll(incomplete)
+    val rowsWritten = futures.map(_.get(10, TimeUnit.MINUTES)).foldLeft(0L)(_+_)
+    executor.shutdown()
+    executor.awaitTermination(10, TimeUnit.SECONDS)
 
-    while (buf.exists(!_.isDone))
-      Thread.sleep(1000)
-
+    if (rowsWritten != rows)
+      logger.warn(s"$rows rows read $rowsWritten rows written")
     rows
   }
 
-  private class AppendRunnable(orc: OrcAppender, lines: Array[String]) extends Callable[Long] {
-    override def call(): Long = orc.append(lines.iterator)
+  private class AppendRunnable(orc: OrcAppender,
+                               queue: ArrayBlockingQueue[Array[String]])
+    extends Callable[Long] {
+    override def call(): Long = {
+      var rows: Long = 0
+      val t = Thread.currentThread
+      var continue = true
+      while (!t.isInterrupted && continue){
+        val batch = queue.take()
+        if (batch.isEmpty)
+          continue = false
+        else
+          rows += orc.append(batch)
+      }
+      rows
+    }
   }
 }

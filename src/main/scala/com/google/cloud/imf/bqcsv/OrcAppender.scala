@@ -17,7 +17,6 @@
 package com.google.cloud.imf.bqcsv
 
 import java.net.URI
-import java.util.NoSuchElementException
 
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, VectorizedRowBatch}
@@ -79,14 +78,11 @@ class OrcAppender(schemaProvider: SchemaProvider,
    * @param lines Iterator containing lines of data
    * @return row count
    */
-  def append(lines: Iterator[String]): Long = synchronized{
-    var rows = 0L
-    while (lines.hasNext){
-      rows += append(lines.take(batchSize), partWriter)
-      rowCount += rows
-      if (stats.getBytesWritten >= partSize)
-        newPart()
-    }
+  def append(lines: Array[String]): Long = {
+    val rows = append(lines, partWriter)
+    rowCount += rows
+    if (stats.getBytesWritten >= partSize)
+      newPart()
     rows
   }
 
@@ -96,7 +92,7 @@ class OrcAppender(schemaProvider: SchemaProvider,
    * @param partWriter ORC Writer for single output partition
    * @return row count
    */
-  private def append(batch: Iterator[String], partWriter: Writer): Long = {
+  private def append(batch: Array[String], partWriter: Writer): Long = {
     var rows: Long = 0
     rowBatch.reset()
     val rowId = OrcAppender.acceptBatch(batch, decoders, cols, delimiter)
@@ -133,21 +129,21 @@ object OrcAppender {
    * @param rowId index within the batch
    */
   private final def acceptRow(line: String,
-                      decoders: Array[Decoder],
-                      cols: Array[ColumnVector],
-                      rowId: Int,
-                      delimiter: Char): Unit = {
+                              decoders: Array[Decoder],
+                              cols: Array[ColumnVector],
+                              rowId: Int,
+                              delimiter: Char): Unit = {
     val fields = line.split(delimiter)
     var i = 0
-    while (i < decoders.length){
-      try {
+    try {
+      while (i < decoders.length){
         appendColumn(fields(i), decoders(i), cols(i), rowId)
-      } catch {
-        case e: Exception =>
-          System.err.println(s"failed on column $i\n${fields.lift(i)}")
-          throw e
+        i += 1
       }
-      i += 1
+    } catch {
+      case e: Exception =>
+        System.err.println(s"failed on column $i\n${fields.lift(i)}")
+        throw e
     }
   }
 
@@ -158,26 +154,22 @@ object OrcAppender {
    * @param cols VectorizedRowBatch
    * @return rowId
    */
-  private final def acceptBatch(lines: Iterator[String],
-                        decoders: Array[Decoder],
-                        cols: Array[ColumnVector],
-                        delimiter: Char): Int = {
+  private final def acceptBatch(lines: Array[String],
+                                decoders: Array[Decoder],
+                                cols: Array[ColumnVector],
+                                delimiter: Char): Int = {
     var rowId = 0
-    try {
-      while (true) {
-        val line = lines.next
-        try {
-          acceptRow(line, decoders, cols, rowId, delimiter)
-        } catch {
-          case e: Exception =>
-            System.err.println(s"failed on row $rowId\n$line")
-            throw e
-        } finally {
-          rowId += 1
-        }
+    while (rowId < lines.length) {
+      val line = lines(rowId)
+      try {
+        acceptRow(line, decoders, cols, rowId, delimiter)
+      } catch {
+        case e: Exception =>
+          System.err.println(s"failed on row $rowId\n$line")
+          throw e
+      } finally {
+        rowId += 1
       }
-    } catch {
-      case _: NoSuchElementException =>
     }
     rowId
   }
