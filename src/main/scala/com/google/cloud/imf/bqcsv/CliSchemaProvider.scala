@@ -37,11 +37,11 @@ object CliSchemaProvider {
             if (args.contains('|')){
               // zone and format
               val Array(tz,format) = args.split('|')
-              val timezone = Option(tz.toInt)
+              val timezone = Option(tz)
               SchemaField(name, t, timezone = timezone, format = format)
-            } else if (args.length < 8) {
+            } else if (args.contains("/")) {
               // zone only
-              SchemaField(name, t, timezone = Option(args.toInt))
+              SchemaField(name, t, timezone = Option(args))
             } else {
               // format only
               val format = args
@@ -69,7 +69,7 @@ object CliSchemaProvider {
                          precision: Int = -1,
                          scale: Int = -1,
                          format: String = "",
-                         timezone: Option[Int] = None) {
+                         timezone: Option[String] = None) {
     def decoder: Decoder = {
       typ match {
         case STRING =>
@@ -85,7 +85,7 @@ object CliSchemaProvider {
         case TIMESTAMP|DATETIME if timezone.isDefined && format.nonEmpty =>
           TimestampDecoder2(format, timezone.get)
         case TIMESTAMP|DATETIME if timezone.isDefined && format.isEmpty =>
-          TimestampDecoder2(offset = timezone.get)
+          TimestampDecoder2(zoneId = timezone.get)
         case NUMERIC =>
           DecimalDecoder(precision,scale)
         case INT64 =>

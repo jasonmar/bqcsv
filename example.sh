@@ -7,7 +7,7 @@ java -cp "$CP" com.google.cloud.imf.BqCsv \
   --replace \
   --autodetect \
   --dataset dataset \
-  --project project \
+  --project pso-wmt-dl \
   src/test/resources/sample1.txt \
-  gs://bucket/example1 \
-  project:dataset.table
+  gs://pso-wmt-dl-test/example2 \
+  pso-wmt-dl:dataset.table5

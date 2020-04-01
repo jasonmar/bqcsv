@@ -19,4 +19,4 @@ CREATE TABLE dataset.template (
     id3 string,
     id4 string,
     id5 NUMERIC OPTIONS(description="5,0"),
-    rank TIMESTAMP OPTIONS(description="-8|yyyy-MM-dd HH:mm:ss"))
+    rank TIMESTAMP OPTIONS(description="America/Chicago|yyyy-MM-dd HH:mm:ss"))

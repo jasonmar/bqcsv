@@ -100,7 +100,7 @@ object SchemaInference {
     data.map(_.length).max
   }
 
-  def inferType(sample: Array[String], defaultOffset: Int): Decoder = {
+  def inferType(sample: Array[String], zoneId: String): Decoder = {
     val col = sample.map(_.trim)
     val maxLength = getMaxLength(col)
     if (col.forall(isNumeric)){
@@ -115,7 +115,7 @@ object SchemaInference {
     } else if (col.forall(isZonedTimestamp)){
       TimestampDecoder(ZonedTimeStampPattern)
     } else if (col.forall(isTimestamp)) {
-      TimestampDecoder2(TimeStampPattern, defaultOffset)
+      TimestampDecoder2(TimeStampPattern, zoneId)
     } else {
       val fmt = dateFormat(col)
       if (fmt.isDefined){

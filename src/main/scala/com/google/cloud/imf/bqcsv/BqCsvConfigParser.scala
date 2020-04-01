@@ -78,10 +78,10 @@ object BqCsvConfigParser extends OptionParser[BqCsvConfig]("bqcsv") {
     .action{(_,c) => c.copy(autodetect = true)}
     .text("(optional) infer schema from first 100 lines of file")
 
-  opt[Int]("offset")
+  opt[String]("zoneId")
     .optional
-    .action{(x,c) => c.copy(offset = x)}
-    .text("(optional) offset from GMT (default: 0)")
+    .action{(x,c) => c.copy(zoneId = x)}
+    .text("(optional) time zone ID https://www.iana.org/time-zones (default: America/Chicago)")
 
   opt[Int]("parallelism")
     .optional

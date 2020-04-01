@@ -17,7 +17,7 @@
 package com.google.cloud.imf.bqcsv
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
+import java.time.{LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
 
 import com.google.cloud.imf.bqcsv.Decoders.{DecimalDecoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -31,14 +31,14 @@ class DecoderSpec extends AnyFlatSpec {
     val fmt = DateTimeFormatter.ofPattern(pattern)
     val fmt2 = DateTimeFormatter.ofPattern(pattern2)
     val t = ZonedDateTime.from(fmt.parse(example))
-    val t2 = LocalDateTime.from(fmt2.parse(example2)).atOffset(ZoneOffset.ofHours(0))
+    val t2 = LocalDateTime.from(fmt2.parse(example2)).atZone(ZoneId.of("Etc/GMT"))
     assert(t.toEpochSecond == t2.toEpochSecond)
     assert(t.getNano == 0)
     assert(t2.getNano == 0)
   }
 
   it should "parse schema" in {
-    val example = "key1:STRING:24,key2:STRING:24,key3:STRING:24,key4:STRING:24,STATUS:STRING:15,date1:TIMESTAMP,qty1:NUMERIC:14.4,key5:STRING:24,key6:STRING:24,qty2:NUMERIC:14.4,date2:TIMESTAMP,key7:STRING:24,key8:STRING:24,timestamp1:TIMESTAMP,timestamp2:TIMESTAMP,id1:STRING:40,id2:STRING:40,id3:STRING:40,id4:STRING:40,id5:NUMERIC:5.0,rank:TIMESTAMP:6"
+    val example = "key1:STRING:24,key2:STRING:24,key3:STRING:24,key4:STRING:24,STATUS:STRING:15,date1:TIMESTAMP,qty1:NUMERIC:14.4,key5:STRING:24,key6:STRING:24,qty2:NUMERIC:14.4,date2:TIMESTAMP,key7:STRING:24,key8:STRING:24,timestamp1:TIMESTAMP,timestamp2:TIMESTAMP,id1:STRING:40,id2:STRING:40,id3:STRING:40,id4:STRING:40,id5:NUMERIC:5.0,rank:TIMESTAMP:America/Chicago"
     val sp = CliSchemaProvider(example)
     val expected = Array[Decoder](
       StringDecoder(24),
@@ -61,7 +61,7 @@ class DecoderSpec extends AnyFlatSpec {
       StringDecoder(40),
       StringDecoder(40),
       DecimalDecoder(5,0),
-      TimestampDecoder2(offset = 6)).toSeq
+      TimestampDecoder2(zoneId = "America/Chicago")).toSeq
 
     assert(sp.decoders.toSeq == expected)
   }

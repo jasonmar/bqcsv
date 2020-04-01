@@ -18,7 +18,7 @@ package com.google.cloud.imf.bqcsv
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime, ZoneOffset, ZonedDateTime}
+import java.time.{LocalDate, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
 
 import com.google.cloud.bigquery.StandardSQLTypeName
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, DoubleColumnVector, LongColumnVector, TimestampColumnVector}
@@ -112,14 +112,13 @@ object Decoders {
     override def bqType: StandardSQLTypeName = StandardSQLTypeName.TIMESTAMP
   }
 
-  case class TimestampDecoder2(format: String = "yyyy-MM-dd HH:mm:ss", offset: Int) extends Decoder {
+  case class TimestampDecoder2(format: String = "yyyy-MM-dd HH:mm:ss", zoneId: String) extends Decoder {
     protected val fmt: DateTimeFormatter = DateTimeFormatter.ofPattern(format)
-    require(offset >= -18 && offset <= 18, s"invalid offset $offset")
-    private final val zoneOffset = ZoneOffset.ofHours(offset)
+    private final val zone = ZoneId.of(zoneId)
 
     override def get(s: String, row: ColumnVector, i: Int): Unit = {
       val tcv = row.asInstanceOf[TimestampColumnVector]
-      val timestamp = LocalDateTime.from(fmt.parse(s.trim)).atOffset(zoneOffset)
+      val timestamp = LocalDateTime.from(fmt.parse(s.trim)).atZone(zone)
       tcv.time.update(i, timestamp.toEpochSecond*1000L)
       tcv.nanos.update(i, 0)
     }

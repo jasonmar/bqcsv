@@ -46,16 +46,16 @@ object TableSchemaProvider extends Logging {
         DecimalDecoder(precision.toInt,scale.toInt)
       case (DATE,Some(format)) =>
         DateDecoder(format)
-      case (TIMESTAMP,Some(offset)) if offset.length < 8 =>
-        TimestampDecoder2(offset = offset.toInt)
       case (TIMESTAMP,Some(args)) if args.contains('|') =>
-        val Array(offset,format) = args.split('|')
-        TimestampDecoder2(format, offset.toInt)
-      case (DATETIME,Some(offset)) if offset.length < 8 =>
-        TimestampDecoder2(offset = offset.toInt)
+        val Array(zoneId,format) = args.split('|')
+        TimestampDecoder2(format, zoneId)
+      case (TIMESTAMP,Some(zoneId)) if zoneId.contains('/') =>
+        TimestampDecoder2(zoneId = zoneId)
       case (DATETIME,Some(args)) if args.contains('|') =>
-        val Array(offset,format) = args.split('|')
-        TimestampDecoder2(format, offset.toInt)
+        val Array(zoneId,format) = args.split('|')
+        TimestampDecoder2(format, zoneId)
+      case (DATETIME,Some(zoneId)) if zoneId.contains('/') =>
+        TimestampDecoder2(zoneId = zoneId)
       case (TIMESTAMP,Some(format)) =>
         TimestampDecoder(format)
       case (DATETIME,Some(format)) =>
