@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.orc.{CompressionKind, OrcConf, OrcFile}
 
-import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 
 object BqCsv extends Logging {
@@ -97,8 +96,10 @@ object BqCsv extends Logging {
         CliSchemaProvider(cfg.schema)
       }
 
+    logger.debug(s"Creating fixed thread pool with size ${cfg.parallelism}")
     val executorService = Executors.newFixedThreadPool(cfg.parallelism)
 
+    logger.debug(s"Starting to write")
     val rowCount = write(sample.iterator ++ lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp, gcs,
       executorService, cfg.parallelism)
     src.close
@@ -160,6 +161,7 @@ object BqCsv extends Logging {
       OrcConf.ENABLE_INDEXES.setBoolean(c, false)
       OrcConf.OVERWRITE_OUTPUT_FILE.setBoolean(c, true)
       OrcConf.MEMORY_POOL.setDouble(c, 0.5d)
+      OrcConf.ROWS_BETWEEN_CHECKS.setLong(c, 0)
       c
     }
 
@@ -181,7 +183,7 @@ object BqCsv extends Logging {
     }
     val queues = indices.map(_ => Queues.newArrayBlockingQueue[Array[String]](64))
     val futures = indices
-      .map{i => new AppendRunnable(appenders(i), queues(i))}
+      .map{i => new ORCAppendCallable(appenders(i), queues(i))}
       .map(executor.submit(_))
 
     var i = 0
@@ -201,12 +203,14 @@ object BqCsv extends Logging {
     executor.awaitTermination(10, TimeUnit.SECONDS)
 
     if (rowsWritten != rows)
-      logger.warn(s"$rows rows read $rowsWritten rows written")
+      logger.warn(s"rows read does not match rows written ($rows != $rowsWritten)")
+
+    logger.debug(s"$rowsWritten rows written")
     rows
   }
 
-  private class AppendRunnable(orc: OrcAppender,
-                               queue: ArrayBlockingQueue[Array[String]])
+  private class ORCAppendCallable(orc: OrcAppender,
+                                  queue: ArrayBlockingQueue[Array[String]])
     extends Callable[Long] {
     override def call(): Long = {
       var rows: Long = 0
@@ -219,6 +223,7 @@ object BqCsv extends Logging {
         else
           rows += orc.append(batch)
       }
+      orc.close()
       rows
     }
   }

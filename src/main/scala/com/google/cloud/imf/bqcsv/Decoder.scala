@@ -24,10 +24,10 @@ trait Decoder {
   /** Read a field into a mutable output builder
     *
     * @param s String
-    * @param row ColumnVector
+    * @param column ColumnVector
     * @param i row index
     */
-  def get(s: String, row: ColumnVector, i: Int): Unit
+  def get(s: String, column: ColumnVector, i: Int): Unit
 
   def columnVector(maxSize: Int): ColumnVector
 

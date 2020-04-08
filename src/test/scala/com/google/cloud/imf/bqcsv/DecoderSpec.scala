@@ -17,7 +17,7 @@
 package com.google.cloud.imf.bqcsv
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
+import java.time.{LocalDateTime, ZoneId, ZonedDateTime}
 
 import com.google.cloud.imf.bqcsv.Decoders.{DecimalDecoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
 import org.scalatest.flatspec.AnyFlatSpec

@@ -26,6 +26,7 @@ object Util {
       rootLogger.addAppender(new ConsoleAppender(new PatternLayout("%d{ISO8601} %-5p %c %x - %m%n")))
       LogManager.getLogger("org.apache.orc.impl").setLevel(Level.ERROR)
       LogManager.getLogger("org.apache.http").setLevel(Level.WARN)
+      LogManager.getLogger("org.apache.hadoop.util").setLevel(Level.ERROR)
     }
 
     if (sys.env.get("BQCSV_ROOT_LOGGER").contains("DEBUG") || debug) {

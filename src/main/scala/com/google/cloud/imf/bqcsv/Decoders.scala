@@ -18,7 +18,7 @@ package com.google.cloud.imf.bqcsv
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
+import java.time.{LocalDate, LocalDateTime, ZoneId, ZonedDateTime}
 
 import com.google.cloud.bigquery.StandardSQLTypeName
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, DoubleColumnVector, LongColumnVector, TimestampColumnVector}
@@ -27,8 +27,8 @@ import org.apache.orc.TypeDescription
 
 object Decoders {
   case class StringDecoder(length: Int = -1) extends Decoder {
-    override def get(s: String, row: ColumnVector, i: Int): Unit = {
-      val bcv = row.asInstanceOf[BytesColumnVector]
+    override def get(s: String, column: ColumnVector, i: Int): Unit = {
+      val bcv = column.asInstanceOf[BytesColumnVector]
       val bytes = s.getBytes(UTF_8)
       bcv.setRef(i,bytes,0,bytes.length)
     }
@@ -46,9 +46,9 @@ object Decoders {
   }
 
   case class Int64Decoder() extends Decoder {
-    override def get(s: String, row: ColumnVector, i: Int): Unit = {
+    override def get(s: String, column: ColumnVector, i: Int): Unit = {
       val long = s.trim.toLong
-      row.asInstanceOf[LongColumnVector].vector.update(i, long)
+      column.asInstanceOf[LongColumnVector].vector.update(i, long)
     }
 
     override def columnVector(maxSize: Int): ColumnVector =
@@ -61,9 +61,9 @@ object Decoders {
   }
 
   case class Float64Decoder() extends Decoder {
-    override def get(s: String, row: ColumnVector, i: Int): Unit = {
+    override def get(s: String, column: ColumnVector, i: Int): Unit = {
       val double = s.trim.toDouble
-      row.asInstanceOf[DoubleColumnVector].vector.update(i, double)
+      column.asInstanceOf[DoubleColumnVector].vector.update(i, double)
     }
 
     override def columnVector(maxSize: Int): ColumnVector =
@@ -78,8 +78,8 @@ object Decoders {
   case class DateDecoder(format: String = "yyyy-MM-dd") extends Decoder {
     protected val fmt: DateTimeFormatter = DateTimeFormatter.ofPattern(format)
 
-    override def get(s: String, row: ColumnVector, i: Int): Unit = {
-      val dcv = row.asInstanceOf[DateColumnVector]
+    override def get(s: String, column: ColumnVector, i: Int): Unit = {
+      val dcv = column.asInstanceOf[DateColumnVector]
       val dt = LocalDate.from(fmt.parse(s.trim)).toEpochDay
       dcv.vector.update(i, dt)
     }
@@ -96,8 +96,8 @@ object Decoders {
   case class TimestampDecoder(format: String = "yyyy-MM-dd HH:mm:ssz") extends Decoder {
     protected val fmt: DateTimeFormatter = DateTimeFormatter.ofPattern(format)
 
-    override def get(s: String, row: ColumnVector, i: Int): Unit = {
-      val tcv = row.asInstanceOf[TimestampColumnVector]
+    override def get(s: String, column: ColumnVector, i: Int): Unit = {
+      val tcv = column.asInstanceOf[TimestampColumnVector]
       val timestamp = ZonedDateTime.from(fmt.parse(s.trim))
       tcv.time.update(i, timestamp.toEpochSecond*1000L)
       tcv.nanos.update(i, 0)
@@ -116,8 +116,8 @@ object Decoders {
     protected val fmt: DateTimeFormatter = DateTimeFormatter.ofPattern(format)
     private final val zone = ZoneId.of(zoneId)
 
-    override def get(s: String, row: ColumnVector, i: Int): Unit = {
-      val tcv = row.asInstanceOf[TimestampColumnVector]
+    override def get(s: String, column: ColumnVector, i: Int): Unit = {
+      val tcv = column.asInstanceOf[TimestampColumnVector]
       val timestamp = LocalDateTime.from(fmt.parse(s.trim)).atZone(zone)
       tcv.time.update(i, timestamp.toEpochSecond*1000L)
       tcv.nanos.update(i, 0)
@@ -135,8 +135,8 @@ object Decoders {
   case class DecimalDecoder(precision: Int, scale: Int) extends Decoder {
     require(precision >= 0 && precision < 38, s"invalid precision $precision")
     require(scale >= 0 && scale < 38, s"invalid scale $scale")
-    override def get(s: String, row: ColumnVector, i: Int): Unit = {
-      val dcv = row.asInstanceOf[Decimal64ColumnVector]
+    override def get(s: String, column: ColumnVector, i: Int): Unit = {
+      val dcv = column.asInstanceOf[Decimal64ColumnVector]
       val long = s.trim.filter(c => c.isDigit || c == '-').toLong
       dcv.vector.update(i, long)
     }

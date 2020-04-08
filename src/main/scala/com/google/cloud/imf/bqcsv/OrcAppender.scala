@@ -60,16 +60,21 @@ class OrcAppender(schemaProvider: SchemaProvider,
       batch.cols(i) = cols(i)
     batch
   }
-  private var partWriter = {
+
+  def newWriter(): Writer = {
     val path = partPath()
+    logger.info(s"Created ORC Writer for $path")
     OrcFile.createWriter(path, writerOptions)
   }
 
+  private var partWriter = newWriter()
+
   private def newPart(): Unit = {
-    if (partWriter != null)
+    if (partWriter != null) {
       partWriter.close()
-    val path = partPath()
-    partWriter = OrcFile.createWriter(path, writerOptions)
+      logger.debug(s"Closed ORC Writer")
+    }
+    partWriter = newWriter()
     stats.reset()
   }
 
@@ -81,6 +86,7 @@ class OrcAppender(schemaProvider: SchemaProvider,
   def append(lines: Array[String]): Long = {
     val rows = append(lines, partWriter)
     rowCount += rows
+    logger.debug(s"$rowCount rows written")
     if (stats.getBytesWritten >= partSize)
       newPart()
     rows
@@ -96,11 +102,14 @@ class OrcAppender(schemaProvider: SchemaProvider,
     var rows: Long = 0
     rowBatch.reset()
     val rowId = OrcAppender.acceptBatch(batch, decoders, cols, delimiter)
-    if (rowId == 0)
+    if (rowId == 0) {
+      logger.debug(s"reached EOF - $rowId rows accepted in current batch")
       rowBatch.endOfFile = true
+    }
     rowBatch.size = rowId
     rows += rowId
     partWriter.addRowBatch(rowBatch)
+    logger.debug(s"added VectorizedRowBatch with size $rowId")
     partWriter match {
       case w: WriterImpl =>
         w.checkMemory(1.0d)
@@ -108,9 +117,16 @@ class OrcAppender(schemaProvider: SchemaProvider,
     }
     rows
   }
+
+  def close(): Unit = {
+    if (partWriter != null) {
+      logger.info(s"Closing ORC Writer")
+      partWriter.close()
+    }
+  }
 }
 
-object OrcAppender {
+object OrcAppender extends Logging {
   /**
    *
    * @param field String value of column
@@ -142,7 +158,7 @@ object OrcAppender {
       }
     } catch {
       case e: Exception =>
-        System.err.println(s"failed on column $i\n${fields.lift(i)}")
+        logger.error(s"Failed on column $i\n${fields.lift(i)}")
         throw e
     }
   }
@@ -165,7 +181,7 @@ object OrcAppender {
         acceptRow(line, decoders, cols, rowId, delimiter)
       } catch {
         case e: Exception =>
-          System.err.println(s"failed on row $rowId\n$line")
+          logger.error(s"Failed on row $rowId\n$line")
           throw e
       } finally {
         rowId += 1

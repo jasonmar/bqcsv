@@ -15,7 +15,7 @@
  */
 organization := "com.google.cloud"
 name := "bqcsv"
-version := "0.1.0-SNAPSHOT"
+version := "0.2.1-SNAPSHOT"
 scalaVersion := "2.13.1"
 publishMavenStyle := true
 
