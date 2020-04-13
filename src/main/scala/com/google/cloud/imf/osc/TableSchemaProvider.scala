@@ -41,6 +41,9 @@ object TableSchemaProvider extends Logging {
         StringDecoder(len.toInt)
       case (STRING,_) =>
         StringDecoder()
+      case (NUMERIC,None) =>
+        logger.warn("NUMERIC precision and scale not set - defult of 18,5")
+        DecimalDecoder(18,5)
       case (NUMERIC,Some(args)) =>
         val Array(precision,scale) = args.split(',')
         DecimalDecoder(precision.toInt,scale.toInt)
