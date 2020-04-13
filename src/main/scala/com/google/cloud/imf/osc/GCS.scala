@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.auth.Credentials
@@ -24,7 +24,7 @@ object GCS extends Logging {
   def defaultClient(credentials: Credentials): Storage = {
     StorageOptions.newBuilder
       .setCredentials(credentials)
-      .setHeaderProvider(FixedHeaderProvider.create("user-agent", BqCsvConfigParser.UserAgent))
+      .setHeaderProvider(FixedHeaderProvider.create("user-agent", BQ.UserAgent))
       .build
       .getService
   }

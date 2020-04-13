@@ -14,24 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
+import org.apache.log4j.{LogManager, Logger}
 
-import com.google.cloud.bigquery.Schema
-import org.apache.orc.TypeDescription
-import org.apache.orc.TypeDescription.Category
 
-trait SchemaProvider {
-  def fieldNames: Seq[String]
-
-  def decoders: Array[Decoder]
-
-  def ORCSchema: TypeDescription =
-    fieldNames.zip(decoders)
-      .foldLeft(new TypeDescription(Category.STRUCT)){(a,b) =>
-          a.addField(b._1,b._2.typeDescription)
-      }
-
-  def bqSchema: Schema
-
-  override def toString: String = ORCSchema.toJson
+trait Logging {
+  @transient
+  protected lazy val logger: Logger = LogManager.getLogger(this.getClass.getCanonicalName.stripSuffix("$"))
 }

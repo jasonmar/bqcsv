@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
 import com.google.common.collect.ImmutableSet
 import org.apache.log4j.{ConsoleAppender, Level, LogManager, PatternLayout}

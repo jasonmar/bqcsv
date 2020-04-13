@@ -20,7 +20,7 @@ import java.util.concurrent.{ArrayBlockingQueue, Callable, ExecutorService, Exec
 
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bigquery.{BigQuery, ExternalTableDefinition, JobId, JobInfo, StandardTableDefinition, TableId}
-import com.google.cloud.imf.bqcsv.{AutoDetectProvider, BQ, BqCsvConfig, BqCsvConfigParser, CliSchemaProvider, GCS, Logging, NoOpMemoryManager, OrcAppender, SchemaProvider, SimpleGCSFileSystem, TableSchemaProvider, Util}
+import com.google.cloud.imf.osc.{AutoDetectProvider, BQ, OSCConfig, OSCConfigParser, CliSchemaProvider, GCS, Logging, NoOpMemoryManager, OrcAppender, SchemaProvider, SimpleGCSFileSystem, TableSchemaProvider, Util}
 import com.google.cloud.storage.Storage
 import com.google.common.collect.Queues
 import com.google.rpc.{Code, Status}
@@ -30,9 +30,9 @@ import org.apache.orc.{CompressionKind, OrcConf, OrcFile}
 
 import scala.io.Source
 
-object BqCsv extends Logging {
+object OSC extends Logging {
   def main(args: Array[String]): Unit = {
-    BqCsvConfigParser.parse(args) match {
+    OSCConfigParser.parse(args) match {
       case Some(cfg) =>
         Util.configureLogging(cfg.debug)
         val status = run(cfg)
@@ -46,7 +46,7 @@ object BqCsv extends Logging {
   final val MegaByte: Long = 1024*1024
   final val OptimalCompressBuffer: Int = 32*1024
 
-  def run(cfg: BqCsvConfig): Status = {
+  def run(cfg: OSCConfig): Status = {
     val src = Source.fromFile(cfg.source, "UTF-8")
     val credentials = GoogleCredentials.getApplicationDefault.createScoped(Util.Scopes)
     val bq: BigQuery = BQ.defaultClient(cfg.projectId, cfg.location, credentials)
@@ -66,7 +66,7 @@ object BqCsv extends Logging {
     val schema = table.map(_.getDefinition[StandardTableDefinition].getSchema)
 
     val lines = src.getLines
-    val sample = lines.take(100).toArray
+    val sample = lines.take(cfg.sampleSize).toArray
     val gcs = GCS.defaultClient(credentials)
     val uri = new java.net.URI(cfg.stagingUri)
 
@@ -161,7 +161,7 @@ object BqCsv extends Logging {
       OrcConf.ENABLE_INDEXES.setBoolean(c, false)
       OrcConf.OVERWRITE_OUTPUT_FILE.setBoolean(c, true)
       OrcConf.MEMORY_POOL.setDouble(c, 0.5d)
-      OrcConf.ROWS_BETWEEN_CHECKS.setLong(c, 0)
+      OrcConf.ROWS_BETWEEN_CHECKS.setLong(c, 1024*16)
       c
     }
 

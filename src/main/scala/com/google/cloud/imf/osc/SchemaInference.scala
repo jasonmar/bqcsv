@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
 import java.time.format.DateTimeFormatter
 
-import com.google.cloud.imf.bqcsv.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
+import com.google.cloud.imf.osc.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
 
 import scala.util.Try
 

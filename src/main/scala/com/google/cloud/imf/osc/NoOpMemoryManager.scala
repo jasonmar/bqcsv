@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
 import org.apache.hadoop.fs.Path
 import org.apache.orc.MemoryManager

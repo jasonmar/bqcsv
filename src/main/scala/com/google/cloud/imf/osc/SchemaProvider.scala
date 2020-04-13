@@ -14,24 +14,24 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
-import com.google.cloud.bigquery.StandardSQLTypeName
-import org.apache.hadoop.hive.ql.exec.vector.ColumnVector
+import com.google.cloud.bigquery.Schema
 import org.apache.orc.TypeDescription
+import org.apache.orc.TypeDescription.Category
 
-trait Decoder {
-  /** Read a field into a mutable output builder
-    *
-    * @param s String
-    * @param column ColumnVector
-    * @param i row index
-    */
-  def get(s: String, column: ColumnVector, i: Int): Unit
+trait SchemaProvider {
+  def fieldNames: Seq[String]
 
-  def columnVector(maxSize: Int): ColumnVector
+  def decoders: Array[Decoder]
 
-  def typeDescription: TypeDescription
+  def ORCSchema: TypeDescription =
+    fieldNames.zip(decoders)
+      .foldLeft(new TypeDescription(Category.STRUCT)){(a,b) =>
+          a.addField(b._1,b._2.typeDescription)
+      }
 
-  def bqType: StandardSQLTypeName
+  def bqSchema: Schema
+
+  override def toString: String = ORCSchema.toJson
 }

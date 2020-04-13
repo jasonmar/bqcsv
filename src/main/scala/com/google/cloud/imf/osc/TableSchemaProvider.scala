@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
 import com.google.cloud.bigquery.{Field, Schema, StandardTableDefinition, Table}
-import com.google.cloud.imf.bqcsv.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
+import com.google.cloud.imf.osc.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
 
 import scala.jdk.CollectionConverters.IterableHasAsScala
 
 case class TableSchemaProvider(schema: Schema) extends SchemaProvider {
-  val fields: Array[Field] = schema.getFields.asScala.toArray
+  val fields: Seq[Field] = schema.getFields.asScala.toIndexedSeq
   override val fieldNames: Seq[String] = fields.map(_.getName.toLowerCase)
-  override val decoders: Array[Decoder] = fields.map(TableSchemaProvider.decoder)
+  override val decoders: Array[Decoder] = fields.map(TableSchemaProvider.decoder).toArray
   override def bqSchema: Schema = schema
 }
 

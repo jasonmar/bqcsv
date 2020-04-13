@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, ZoneId, ZonedDateTime}
 
-import com.google.cloud.imf.bqcsv.Decoders.{DecimalDecoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
+import com.google.cloud.imf.osc.Decoders.{DecimalDecoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class DecoderSpec extends AnyFlatSpec {

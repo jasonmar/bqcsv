@@ -14,20 +14,25 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
-import com.google.cloud.bigquery.{StandardSQLTypeName, TableId}
+import com.google.cloud.imf.OSC
+import org.scalatest.flatspec.AnyFlatSpec
 
-trait TableDefProvider {
-  /** Get a map used to look up Type for a given field
-   * @param tbl
-   * @return Map from lowercase field name to SQL Type
-   */
-  def getFieldMap(tbl: TableId): Map[String,StandardSQLTypeName]
-
-  /** Get tuples used to look up Type for a given field
-   * @param tbl id of tabledef to be fetched
-   * @return Tuple of lowercase field name and SQL Type
-   */
-  def getFieldMap2(tbl: TableId): Seq[(String,StandardSQLTypeName)]
+class IntegrationSpec extends AnyFlatSpec {
+  "BqCsv" should "upload" in {
+    val args = Seq("--replace",
+      "--autodetect",
+      "--debug",
+      "--dataset", "dataset",
+      "--project", "project",
+      "src/test/resources/sample1.txt",
+      "gs://bucket/example2",
+      "project:dataset.table")
+    OSCConfigParser.parse(args) match {
+      case Some(cfg) =>
+        OSC.run(cfg)
+      case None =>
+    }
+  }
 }

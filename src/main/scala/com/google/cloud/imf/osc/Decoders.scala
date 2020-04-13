@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.format.DateTimeFormatter

@@ -14,11 +14,20 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
-import org.apache.log4j.{LogManager, Logger}
+package com.google.cloud.imf.osc
 
+import com.google.cloud.bigquery.{StandardSQLTypeName, TableId}
 
-trait Logging {
-  @transient
-  protected lazy val logger: Logger = LogManager.getLogger(this.getClass.getCanonicalName.stripSuffix("$"))
+trait TableDefProvider {
+  /** Get a map used to look up Type for a given field
+   * @param tbl
+   * @return Map from lowercase field name to SQL Type
+   */
+  def getFieldMap(tbl: TableId): Map[String,StandardSQLTypeName]
+
+  /** Get tuples used to look up Type for a given field
+   * @param tbl id of tabledef to be fetched
+   * @return Tuple of lowercase field name and SQL Type
+   */
+  def getFieldMap2(tbl: TableId): Seq[(String,StandardSQLTypeName)]
 }

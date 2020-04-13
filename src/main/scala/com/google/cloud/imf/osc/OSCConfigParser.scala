@@ -14,21 +14,25 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
 import java.net.URI
 import java.nio.file.{Files, Paths}
 
 import scopt.OptionParser
 
+import scala.collection.immutable.ArraySeq
 
-object BqCsvConfigParser extends OptionParser[BqCsvConfig]("bqcsv") {
-  val UserAgent = "google-pso-tool/bqcsv/0.1"
 
-  def parse(args: Seq[String]): Option[BqCsvConfig] = parse(args, BqCsvConfig())
+object OSCConfigParser extends OptionParser[OSCConfig]("OSC") {
+  def parse(args: Array[String]): Option[OSCConfig] = parse(ArraySeq.unsafeWrapArray(args), OSCConfig())
 
-  head("bqcsv", UserAgent)
-    .text("BigQuery CSV Utility\nUploads delimited file to GCS as ORC and loads into BigQuery")
+  head("osc", "0.3")
+    .text("""Google Cloud Open Systems Connector
+            |
+            |*  Uploads delimited files to GCS as ORC
+            |*  Registers ORC as external table or Loads into Native BigQuery table
+            |""".stripMargin)
 
   help("help").text("prints this usage text")
 
@@ -57,6 +61,11 @@ object BqCsvConfigParser extends OptionParser[BqCsvConfig]("bqcsv") {
     .optional
     .text("(optional) table lifetime in milliseconds (default: 7 days)")
     .action((x,c) => c.copy(lifetime = x))
+
+  opt[Int]("sampleSize")
+    .optional
+    .text("(optional) number of rows to sample for schema inference (default: 4096)")
+    .action((x,c) => c.copy(sampleSize = x))
 
   opt[Unit]("replace")
     .optional
@@ -130,7 +139,7 @@ object BqCsvConfigParser extends OptionParser[BqCsvConfig]("bqcsv") {
 
   arg[String]("tableSpec")
     .required
-    .text("BigQuery table to be loaded in format [project:][dataset:]table")
+    .text("BigQuery table to be loaded in format project:dataset.table")
     .validate(x =>
       if (x.length < 3) failure(s"invalid tablespec $x")
       else success

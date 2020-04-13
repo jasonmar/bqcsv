@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
 import com.google.cloud.bigquery.StandardSQLTypeName._
 import com.google.cloud.bigquery.{Field, Schema, StandardSQLTypeName}
-import com.google.cloud.imf.bqcsv.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
+import com.google.cloud.imf.osc.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
+
+import scala.collection.immutable.ArraySeq
 
 object CliSchemaProvider {
   def fields(schema: String): Seq[String] =
-    schema.split(',')
+    ArraySeq.unsafeWrapArray(schema.split(','))
 
   def fieldArgs(field: String): SchemaField = {
     field.split(':') match {
@@ -103,9 +105,9 @@ object CliSchemaProvider {
 case class CliSchemaProvider(schema: String) extends SchemaProvider {
   require(schema.nonEmpty, "schema not provided")
   import CliSchemaProvider._
-  val fields: Array[SchemaField] = schema.split(',').map(fieldArgs)
+  val fields: Seq[SchemaField] = ArraySeq.unsafeWrapArray(schema.split(',')).map(fieldArgs)
   override val fieldNames: Seq[String] = fields.map(_.name.toLowerCase)
-  override val decoders: Array[Decoder] = fields.map(_.decoder)
+  override val decoders: Array[Decoder] = fields.map(_.decoder).toArray
 
   override def bqSchema: Schema = {
     import scala.jdk.CollectionConverters.IterableHasAsJava

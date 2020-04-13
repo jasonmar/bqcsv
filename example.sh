@@ -2,12 +2,17 @@
 set -e
 set -x
 
-CP='target/scala-2.13/bqcsv_2.13-0.1.0-SNAPSHOT.jar:target/scala-2.13/bqcsv.dep.jar'
-java -cp "$CP" com.google.cloud.imf.BqCsv \
+lib='target/scala-2.13'
+
+CP="$lib/open-systems-connector_2.13-0.3.0-SNAPSHOT.jar:$lib/open-systems-connector-assembly-0.3.0-SNAPSHOT-deps.jar"
+
+java -cp "$CP" com.google.cloud.imf.OSC \
+  --help \
   --replace \
   --autodetect \
+  --debug \
   --dataset dataset \
-  --project pso-wmt-dl \
+  --project project \
   src/test/resources/sample1.txt \
-  gs://pso-wmt-dl-test/example2 \
-  pso-wmt-dl:dataset.table5
+  gs://bucket/example2 \
+  project:dataset.table

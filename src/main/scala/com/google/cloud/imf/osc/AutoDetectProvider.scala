@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
 import com.google.cloud.bigquery.{Field, Schema}
 
@@ -58,7 +58,7 @@ object AutoDetectProvider {
     }
   }
 
-  def get(cfg: BqCsvConfig, sample: Array[String], schema: Option[Schema]): SchemaProvider = {
+  def get(cfg: OSCConfig, sample: Array[String], schema: Option[Schema]): SchemaProvider = {
     import scala.jdk.CollectionConverters.IterableHasAsScala
     val fieldNames =
       schema

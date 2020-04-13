@@ -1,4 +1,4 @@
-# BigQuery CSV Utility
+# BigQuery Open Systems Connector
 
 This utility loads a delimited text file into BigQuery with intermediate storage as ORC.
 
@@ -43,9 +43,12 @@ this tool is useful for reducing upload size in network bandwidth constrained en
 Help text:
 
 ```
-BigQuery CSV Utility
-Uploads delimited file to GCS as ORC and loads into BigQuery
-Usage: bqcsv [options] source stagingUri tableSpec
+Google Cloud Open Systems Connector
+
+*  Uploads delimited files to GCS as ORC
+*  Registers ORC as external table or Loads into Native BigQuery table
+
+Usage: OSC [options] source stagingUri tableSpec
 
   --help                   prints this usage text
   --schema <value>         (optional) schema information in format <name>[:<type>][:<args>],...
@@ -54,11 +57,12 @@ example: 'col1:STRING:24,col2:INT64,col3:TIMESTAMP:6,col4:DATE,col5:NUMERIC:9.2'
   --dataset <value>        Default BigQuery Dataset in format [PROJECT_ID]:DATASET
   --location <value>       (optional) BigQuery region (default: US)
   --lifetime <value>       (optional) table lifetime in milliseconds (default: 7 days)
+  --sampleSize <value>     (optional) number of rows to sample for schema inference (default: 4096)
   --replace                (optional) delete existing ORC file in GCS, if present, and overwrite existing BigQuery table
   --append                 (optional) append to BigQuery table
   --external               (optional) register as BigQuery External Table instead of loading
   --autodetect             (optional) infer schema from first 100 lines of file
-  --offset <value>         (optional) offset from GMT (default: 0)
+  --zoneId <value>         (optional) time zone ID https://www.iana.org/time-zones (default: America/Chicago)
   --parallelism <value>    (optional) parallelism (default: 1)
   --delimiter <value>      (optional) delimiter character
   --templateTableSpec <value>
@@ -66,17 +70,18 @@ example: 'col1:STRING:24,col2:INT64,col3:TIMESTAMP:6,col4:DATE,col5:NUMERIC:9.2'
   --debug                  (optional) set logging level to debug
   source                   path to input file
   stagingUri               GCS prefix where ORC files will be written in format gs://BUCKET/PREFIX
-  tableSpec                BigQuery table to be loaded in format [project:][dataset:]table
+  tableSpec                BigQuery table to be loaded in format project:dataset.table
 ```
 
 
 ### Command line example: load table with schema specified by command-line option
 
 ```sh
-java -cp 'target/scala-2.13/bqcsv_2.13-0.1.0-SNAPSHOT.jar:target/scala-2.13/bqcsv.dep.jar' \
-  com.google.cloud.imf.BqCsv \
+lib='target/scala-2.13'
+cp="$lib/open-systems-connector_2.13-0.3.0-SNAPSHOT.jar:$lib/open-systems-connector-assembly-0.3.0-SNAPSHOT-deps.jar"
+java -cp "$cp" com.google.cloud.imf.OSC \
   --delimiter 'þ' \
-  --schema 'key:STRING:24,date1:TIMESTAMP,qty:NUMERIC:14.4,id1:STRING,pct:FLOAT64,ts2:TIMESTAMP:-8' \
+  --autodetect \
   --dataset dataset \
   --project project \
   path/to/file \
@@ -87,8 +92,9 @@ java -cp 'target/scala-2.13/bqcsv_2.13-0.1.0-SNAPSHOT.jar:target/scala-2.13/bqcs
 ### Command line example: register as external table with lifetime of 1 hour using schema template
 
 ```
-java -cp "target/scala-2.13/bqcsv_2.13-0.1.0-SNAPSHOT.jar:target/scala-2.13/bqcsv.dep.jar" \
-  com.google.cloud.imf.BqCsv \
+lib='target/scala-2.13'
+cp="$lib/open-systems-connector_2.13-0.3.0-SNAPSHOT.jar:$lib/open-systems-connector-assembly-0.3.0-SNAPSHOT-deps.jar"
+java -cp "$cp" com.google.cloud.imf.OSC \
   --external \
   --lifetime 3600000 \
   --dataset dataset \
@@ -138,8 +144,8 @@ in a dataset designated specifically as a template dataset.
 ##### Type arguments
 
 * `TIMESTAMP`: `<format>` (optional) (see [DateTimeFormatter](https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html))
-* `TIMESTAMP`: `<offset>` (optional) (see [ZoneOffset](https://docs.oracle.com/javase/8/docs/api/java/time/ZoneOffset.html))
-* `TIMESTAMP`: `<offset>|<format>` (optional) 
+* `TIMESTAMP`: `<tzId>` (optional) (see [ZoneOffset](https://docs.oracle.com/javase/8/docs/api/java/time/ZoneOffset.html))
+* `TIMESTAMP`: `<tzId>|<format>` (optional) 
 * `NUMERIC`: `<precision>,<scale>` (required)
 * `STRING`: `<length>` (optional)
 * `DATETIME`: same as `TIMESTAMP`
@@ -168,7 +174,7 @@ CREATE TABLE dataset.template (
     id1 string,
     id2 string,
     id3 NUMERIC OPTIONS(description="5,0"),
-    ts2 TIMESTAMP OPTIONS(description="6|yyyy-MM-dd HH:mm:ss")
+    ts2 TIMESTAMP OPTIONS(description="America/Chicago|yyyy-MM-dd HH:mm:ss")
 )
 ```
 
@@ -183,7 +189,7 @@ This utility accepts an additional type argument following a second `:` delimite
 
 Example:
 
-`--schema 'key:STRING:24,date1:TIMESTAMP,qty:NUMERIC:14.4,id1:STRING,pct:FLOAT64,ts2:TIMESTAMP:-8'`
+`--schema 'key:STRING:24,date1:TIMESTAMP,qty:NUMERIC:14.4,id1:STRING,pct:FLOAT64,ts2:TIMESTAMP:America/Chicago'`
 
 
 ##### DATE fields
@@ -207,13 +213,13 @@ use default format `yyyy-MM-dd HH:mm:ssz`
 
 `name:TIMESTAMP`
 
-use default format `yyyy-MM-dd HH:mm:ss` with timezone `-6`
+use default format `yyyy-MM-dd HH:mm:ss` with timezone `America/Chicago`
 
-`name:TIMESTAMP:-6`
+`name:TIMESTAMP:America/Chicago`
 
-specify format `yyyyMMddHHmmss` with timezone `GMT`
+specify format `yyyyMMddHHmmss` with timezone `America/Chicago`
 
-`name:TIMESTAMP:0|yyyyMMddHHmmss`
+`name:TIMESTAMP:America/Chicago|yyyyMMddHHmmss`
 
 specify format `yyyy-MM-dd HH.mm.ssz` (timezone included)
 
@@ -271,7 +277,7 @@ use the [STRING Standard SQL Function](https://cloud.google.com/bigquery/docs/re
 Example:
 
 ```
-SELECT STRING(TIMESTAMP "2020-03-26 15:30:00", "America/Los_Angeles") as string;
+SELECT STRING(TIMESTAMP "2020-03-26 15:30:00", "America/Chicago") as string;
 
 +-------------------------------+
 | string                        |

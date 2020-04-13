@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
 import java.net.URI
 
@@ -112,7 +112,7 @@ class OrcAppender(schemaProvider: SchemaProvider,
     logger.debug(s"added VectorizedRowBatch with size $rowId")
     partWriter match {
       case w: WriterImpl =>
-        w.checkMemory(1.0d)
+        w.checkMemory(0)
       case _ =>
     }
     rows

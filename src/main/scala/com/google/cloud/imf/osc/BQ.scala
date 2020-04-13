@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf.bqcsv
+package com.google.cloud.imf.osc
 
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.auth.Credentials
@@ -26,17 +26,19 @@ import org.threeten.bp.Duration
 
 
 object BQ extends Logging {
+  val UserAgent = "google-pso-tool/bqcsv/0.3"
+
   def defaultClient(project: String, location: String, credentials: Credentials): BigQuery = {
     BigQueryOptions.newBuilder
       .setLocation(location)
       .setProjectId(project)
       .setCredentials(credentials)
-      .setHeaderProvider(FixedHeaderProvider.create("user-agent", BqCsvConfigParser.UserAgent))
+      .setHeaderProvider(FixedHeaderProvider.create("user-agent", UserAgent))
       .build
       .getService
   }
 
-  def register(cfg: BqCsvConfig, bq: BigQuery): Option[ExternalTableDefinition] = {
+  def register(cfg: OSCConfig, bq: BigQuery): Option[ExternalTableDefinition] = {
     val tableId = BQ.resolveTableSpec(cfg.destTableSpec, cfg.projectId, cfg.datasetId)
     val sourceUri = cfg.stagingUri.stripSuffix("/") + "/*.orc"
     val tblDef = ExternalTableDefinition.newBuilder(sourceUri, FormatOptions.orc).build
@@ -48,7 +50,7 @@ object BQ extends Logging {
     Option(bq.getTable(tableId)).map(_.getDefinition[ExternalTableDefinition])
   }
 
-  def configureLoadJob(cfg: BqCsvConfig, schema: Schema): LoadJobConfiguration = {
+  def configureLoadJob(cfg: OSCConfig, schema: Schema): LoadJobConfiguration = {
     val destinationTable = BQ.resolveTableSpec(cfg.destTableSpec, cfg.projectId, cfg.datasetId)
     val sourceUri = cfg.stagingUri.stripSuffix("/") + "/*.orc"
     logger.info(s"destination table=$destinationTable sourceUri=$sourceUri")

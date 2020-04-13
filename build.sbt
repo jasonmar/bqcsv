@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-organization := "com.google.cloud"
-name := "bqcsv"
-version := "0.2.1-SNAPSHOT"
+organization := "com.google.cloud.imf"
+name := "open-systems-connector"
+version := "0.3.0-SNAPSHOT"
 scalaVersion := "2.13.1"
 publishMavenStyle := true
 
@@ -51,8 +51,6 @@ libraryDependencies ++= Seq(
 ).map(_ excludeAll exGuava)
 
 // SBT Assembly settings
-assemblyJarName in assembly := "bqcsv.jar"
-assemblyJarName in assemblyPackageDependency := "bqcsv.dep.jar"
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", _) => MergeStrategy.discard
   case _ => MergeStrategy.first
@@ -61,7 +59,13 @@ mainClass in assembly := Some("com.google.cloud.imf.BqCsv")
 test in assembly := Seq() // Don't run tests during assembly
 
 // Compile settings
-scalacOptions ++= Seq("-optimize")
+scalacOptions ++= Seq(
+  "-opt:l:inline",
+  "-opt-inline-from:**",
+  "-deprecation",
+  "-opt-warnings"
+)
+
 resourceGenerators in Compile += Def.task {
   val file = (resourceDirectory in Compile).value / "build.txt"
   val fmt = new java.text.SimpleDateFormat("yyyy/MM/dd HH:mm:ss")
