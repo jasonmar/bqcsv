@@ -153,7 +153,8 @@ object OrcAppender extends Logging {
     var i = 0
     try {
       while (i < decoders.length){
-        appendColumn(fields(i), decoders(i), cols(i), rowId)
+        val s = if (i >= fields.length) "" else fields(i)
+        appendColumn(s, decoders(i), cols(i), rowId)
         i += 1
       }
     } catch {

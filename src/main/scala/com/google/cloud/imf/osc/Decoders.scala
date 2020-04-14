@@ -31,10 +31,14 @@ object Decoders {
       val bcv = column.asInstanceOf[BytesColumnVector]
       if (s.isEmpty){
         bcv.isNull.update(i, true)
+        bcv.setValPreallocated(i,0)
         if (!bcv.noNulls) bcv.noNulls = false
       } else {
         val bytes = s.getBytes(UTF_8)
-        bcv.setRef(i, bytes, 0, bytes.length)
+        val dst = bcv.getValPreallocatedBytes
+        val dstPos = bcv.getValPreallocatedStart
+        System.arraycopy(bytes, 0, dst, dstPos, bytes.length)
+        bcv.setValPreallocated(i,bytes.length)
       }
     }
 
