@@ -29,8 +29,13 @@ object Decoders {
   case class StringDecoder(length: Int = -1) extends Decoder {
     override def get(s: String, column: ColumnVector, i: Int): Unit = {
       val bcv = column.asInstanceOf[BytesColumnVector]
-      val bytes = s.getBytes(UTF_8)
-      bcv.setRef(i,bytes,0,bytes.length)
+      if (s.isEmpty){
+        bcv.isNull.update(i, true)
+        if (!bcv.noNulls) bcv.noNulls = false
+      } else {
+        val bytes = s.getBytes(UTF_8)
+        bcv.setRef(i, bytes, 0, bytes.length)
+      }
     }
 
     override def columnVector(maxSize: Int): ColumnVector = {
@@ -47,8 +52,14 @@ object Decoders {
 
   case class Int64Decoder() extends Decoder {
     override def get(s: String, column: ColumnVector, i: Int): Unit = {
-      val long = s.trim.toLong
-      column.asInstanceOf[LongColumnVector].vector.update(i, long)
+      val lcv = column.asInstanceOf[LongColumnVector]
+      if (s.isEmpty){
+        lcv.isNull.update(i, true)
+        if (!lcv.noNulls) lcv.noNulls = false
+      } else {
+        val long = s.trim.toLong
+        lcv.vector.update(i, long)
+      }
     }
 
     override def columnVector(maxSize: Int): ColumnVector =
@@ -62,8 +73,14 @@ object Decoders {
 
   case class Float64Decoder() extends Decoder {
     override def get(s: String, column: ColumnVector, i: Int): Unit = {
-      val double = s.trim.toDouble
-      column.asInstanceOf[DoubleColumnVector].vector.update(i, double)
+      val dcv = column.asInstanceOf[DoubleColumnVector]
+      if (s.isEmpty){
+        dcv.isNull.update(i, true)
+        if (!dcv.noNulls) dcv.noNulls = false
+      } else {
+        val double = s.trim.toDouble
+        dcv.vector.update(i, double)
+      }
     }
 
     override def columnVector(maxSize: Int): ColumnVector =
@@ -80,8 +97,13 @@ object Decoders {
 
     override def get(s: String, column: ColumnVector, i: Int): Unit = {
       val dcv = column.asInstanceOf[DateColumnVector]
-      val dt = LocalDate.from(fmt.parse(s.trim)).toEpochDay
-      dcv.vector.update(i, dt)
+      if (s.isEmpty){
+        dcv.isNull.update(i, true)
+        if (!dcv.noNulls) dcv.noNulls = false
+      } else {
+        val dt = LocalDate.from(fmt.parse(s.trim)).toEpochDay
+        dcv.vector.update(i, dt)
+      }
     }
 
     override def columnVector(maxSize: Int): ColumnVector =
@@ -98,9 +120,14 @@ object Decoders {
 
     override def get(s: String, column: ColumnVector, i: Int): Unit = {
       val tcv = column.asInstanceOf[TimestampColumnVector]
-      val timestamp = ZonedDateTime.from(fmt.parse(s.trim))
-      tcv.time.update(i, timestamp.toEpochSecond*1000L)
-      tcv.nanos.update(i, 0)
+      if (s.isEmpty){
+        tcv.isNull.update(i, true)
+        if (!tcv.noNulls) tcv.noNulls = false
+      } else {
+        val timestamp = ZonedDateTime.from(fmt.parse(s.trim))
+        tcv.time.update(i, timestamp.toEpochSecond*1000L)
+        tcv.nanos.update(i, 0)
+      }
     }
 
     override def columnVector(maxSize: Int): ColumnVector =
@@ -118,9 +145,14 @@ object Decoders {
 
     override def get(s: String, column: ColumnVector, i: Int): Unit = {
       val tcv = column.asInstanceOf[TimestampColumnVector]
-      val timestamp = LocalDateTime.from(fmt.parse(s.trim)).atZone(zone)
-      tcv.time.update(i, timestamp.toEpochSecond*1000L)
-      tcv.nanos.update(i, 0)
+      if (s.isEmpty){
+        tcv.isNull.update(i, true)
+        if (!tcv.noNulls) tcv.noNulls = false
+      } else {
+        val timestamp = LocalDateTime.from(fmt.parse(s.trim)).atZone(zone)
+        tcv.time.update(i, timestamp.toEpochSecond * 1000L)
+        tcv.nanos.update(i, 0)
+      }
     }
 
     override def columnVector(maxSize: Int): ColumnVector =
@@ -137,8 +169,13 @@ object Decoders {
     require(scale >= 0 && scale < 38, s"invalid scale $scale")
     override def get(s: String, column: ColumnVector, i: Int): Unit = {
       val dcv = column.asInstanceOf[Decimal64ColumnVector]
-      val long = s.trim.filter(c => c.isDigit || c == '-').toLong
-      dcv.vector.update(i, long)
+      if (s.isEmpty){
+        dcv.isNull.update(i, true)
+        if (!dcv.noNulls) dcv.noNulls = false
+      } else {
+        val long = s.trim.filter(c => c.isDigit || c == '-').toLong
+        dcv.vector.update(i, long)
+      }
     }
 
     override def columnVector(maxSize: Int): ColumnVector =

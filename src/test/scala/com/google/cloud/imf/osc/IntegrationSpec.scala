@@ -21,7 +21,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class IntegrationSpec extends AnyFlatSpec {
   "BqCsv" should "upload" in {
-    val args = Seq("--replace",
+    val args = Array("--replace",
       "--autodetect",
       "--debug",
       "--dataset", "dataset",
