@@ -40,9 +40,10 @@ object TableSchemaProvider extends Logging {
       case (STRING,Some(len)) =>
         StringDecoder(len.toInt)
       case (STRING,_) =>
-        StringDecoder()
+        logger.warn("STRING max length not set - using default of 256")
+        StringDecoder(256)
       case (NUMERIC,None) =>
-        logger.warn("NUMERIC precision and scale not set - defult of 18,5")
+        logger.warn("NUMERIC precision and scale not set - using default of 18,5")
         DecimalDecoder(18,5)
       case (NUMERIC,Some(args)) =>
         val Array(precision,scale) = args.split(',')
