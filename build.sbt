@@ -15,7 +15,7 @@
  */
 organization := "com.google.cloud.imf"
 name := "open-systems-connector"
-version := "0.3.3-SNAPSHOT"
+version := "0.3.5-SNAPSHOT"
 scalaVersion := "2.13.1"
 publishMavenStyle := true
 
@@ -67,7 +67,7 @@ scalacOptions ++= Seq(
 )
 
 resourceGenerators in Compile += Def.task {
-  val file = (resourceDirectory in Compile).value / "build.txt"
+  val file = (resourceDirectory in Compile).value / "osc_build.txt"
   val fmt = new java.text.SimpleDateFormat("yyyy/MM/dd HH:mm:ss")
   val timestamp = fmt.format(new java.util.Date)
   IO.write(file, timestamp)

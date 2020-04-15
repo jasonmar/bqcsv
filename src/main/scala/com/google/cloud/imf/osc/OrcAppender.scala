@@ -18,6 +18,7 @@ package com.google.cloud.imf.osc
 
 import java.net.URI
 
+import com.google.cloud.imf.osc.OrcAppender.AppendResult
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.ql.exec.vector.{ColumnVector, VectorizedRowBatch}
 import org.apache.orc.OrcFile.WriterOptions
@@ -42,9 +43,12 @@ class OrcAppender(schemaProvider: SchemaProvider,
                   baseUri: URI,
                   stats: FileSystem.Statistics,
                   id: String,
-                  batchSize: Int = 1024) extends Logging {
+                  batchSize: Int = 1024,
+                  errorLimit: Long = 0) extends Logging {
   private var partId: Int = 0
   private var rowCount: Long = 0
+  private var errorCount: Long = 0
+
   private def partPath(): Path = {
     val bucket = baseUri.getAuthority
     val prefix = baseUri.getPath.stripPrefix("/")
@@ -83,13 +87,13 @@ class OrcAppender(schemaProvider: SchemaProvider,
    * @param lines Iterator containing lines of data
    * @return row count
    */
-  def append(lines: Array[String]): Long = {
-    val rows = append(lines, partWriter)
-    rowCount += rows
+  def append(lines: Array[String]): AppendResult = {
+    val result = append(lines, partWriter)
+    rowCount += result.rowId
     logger.debug(s"$rowCount rows written")
     if (stats.getBytesWritten >= partSize)
       newPart()
-    rows
+    result
   }
 
   /** Append records to ORC partition
@@ -98,10 +102,11 @@ class OrcAppender(schemaProvider: SchemaProvider,
    * @param partWriter ORC Writer for single output partition
    * @return row count
    */
-  private def append(batch: Array[String], partWriter: Writer): Long = {
+  private def append(batch: Array[String], partWriter: Writer): AppendResult = {
     var rows: Long = 0
     rowBatch.reset()
-    val rowId = OrcAppender.acceptBatch(batch, decoders, cols, delimiter)
+    val result = OrcAppender.acceptBatch(batch, decoders, cols, delimiter, errorLimit - errorCount)
+    val rowId = result.rowId
     if (rowId == 0) {
       logger.debug(s"reached EOF - $rowId rows accepted in current batch")
       rowBatch.endOfFile = true
@@ -115,7 +120,7 @@ class OrcAppender(schemaProvider: SchemaProvider,
         w.checkMemory(0)
       case _ =>
     }
-    rows
+    result
   }
 
   def close(): Unit = {
@@ -159,7 +164,10 @@ object OrcAppender extends Logging {
       }
     } catch {
       case e: Exception =>
-        logger.error(s"Failed on column $i\n${fields.lift(i)}")
+        val decoderType = decoders(i).getClass.getSimpleName.stripSuffix("$")
+        val fieldValue = fields.lift(i).getOrElse("")
+        val fieldLen = fields.lift(i).map(_.length).getOrElse(0)
+        logger.error(s"Failed on column $i $decoderType ${decoders(i)} len=$fieldLen value='$fieldValue'")
         throw e
     }
   }
@@ -174,7 +182,9 @@ object OrcAppender extends Logging {
   private final def acceptBatch(lines: Array[String],
                                 decoders: Array[Decoder],
                                 cols: Array[ColumnVector],
-                                delimiter: Char): Int = {
+                                delimiter: Char,
+                                errorLimit: Long = 0): AppendResult = {
+    var errorCount = 0L
     var rowId = 0
     while (rowId < lines.length) {
       val line = lines(rowId)
@@ -182,12 +192,16 @@ object OrcAppender extends Logging {
         acceptRow(line, decoders, cols, rowId, delimiter)
       } catch {
         case e: Exception =>
+          errorCount += 1
           logger.error(s"Failed on row $rowId\n$line")
-          throw e
+          if (errorCount >= errorLimit)
+            throw e
       } finally {
         rowId += 1
       }
     }
-    rowId
+    AppendResult(rowId, errorCount)
   }
+
+  case class AppendResult(rowId: Int, errorCount: Long)
 }

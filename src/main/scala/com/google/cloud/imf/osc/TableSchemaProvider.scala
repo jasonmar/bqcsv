@@ -26,6 +26,11 @@ case class TableSchemaProvider(schema: Schema) extends SchemaProvider {
   override val fieldNames: Seq[String] = fields.map(_.getName.toLowerCase)
   override val decoders: Array[Decoder] = fields.map(TableSchemaProvider.decoder).toArray
   override def bqSchema: Schema = schema
+
+  override def toString: String =
+    s"""TableSchemaProvider
+       |${decoders.zipWithIndex.zip(fieldNames).map(_.toString).mkString("\t","\n\t","\n")}
+       |""".stripMargin
 }
 
 object TableSchemaProvider extends Logging {
@@ -36,6 +41,7 @@ object TableSchemaProvider extends Logging {
 
   import com.google.cloud.bigquery.StandardSQLTypeName._
   def decoder(field: Field): Decoder = {
+    logger.debug(s"${field.getName} ${field.getType.getStandardType} ${field.getDescription} ")
     (field.getType.getStandardType,Option(field.getDescription)) match {
       case (STRING,Some(len)) =>
         StringDecoder(len.toInt)

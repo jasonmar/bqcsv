@@ -64,6 +64,7 @@ example: 'col1:STRING:24,col2:INT64,col3:TIMESTAMP:6,col4:DATE,col5:NUMERIC:9.2'
   --autodetect             (optional) infer schema from first 100 lines of file
   --zoneId <value>         (optional) time zone ID https://www.iana.org/time-zones (default: America/Chicago)
   --parallelism <value>    (optional) parallelism (default: 1)
+  --errorLimit <value>     (optional) maximum number of errors per thread (default: 0)
   --delimiter <value>      (optional) delimiter character
   --templateTableSpec <value>
                            (optional) TableSpec of BigQuery table to use as schema template in format [project:][dataset:]table

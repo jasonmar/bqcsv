@@ -16,4 +16,4 @@ target
 *.bin
 *.cpy
 tmp
-src/main/resources/build.txt
+src/main/resources/osc_build.txt

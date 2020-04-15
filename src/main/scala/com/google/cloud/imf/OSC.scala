@@ -16,13 +16,15 @@
 
 package com.google.cloud.imf
 
+import java.nio.charset.StandardCharsets
 import java.util.concurrent.{ArrayBlockingQueue, Callable, ExecutorService, Executors, TimeUnit}
 
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bigquery.{BigQuery, ExternalTableDefinition, JobId, JobInfo, StandardTableDefinition, TableId}
-import com.google.cloud.imf.osc.{AutoDetectProvider, BQ, OSCConfig, OSCConfigParser, CliSchemaProvider, GCS, Logging, NoOpMemoryManager, OrcAppender, SchemaProvider, SimpleGCSFileSystem, TableSchemaProvider, Util}
+import com.google.cloud.imf.osc.{AutoDetectProvider, BQ, CliSchemaProvider, GCS, Logging, NoOpMemoryManager, OSCConfig, OSCConfigParser, OrcAppender, SchemaProvider, SimpleGCSFileSystem, TableSchemaProvider, Util}
 import com.google.cloud.storage.Storage
 import com.google.common.collect.Queues
+import com.google.common.io.Resources
 import com.google.rpc.{Code, Status}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
@@ -32,6 +34,7 @@ import scala.io.Source
 
 object OSC extends Logging {
   def main(args: Array[String]): Unit = {
+    System.out.println(Resources.toString(Resources.getResource("osc_build.txt"),StandardCharsets.UTF_8))
     OSCConfigParser.parse(args) match {
       case Some(cfg) =>
         Util.configureLogging(cfg.debug)
@@ -95,13 +98,14 @@ object OSC extends Logging {
       } else {
         CliSchemaProvider(cfg.schema)
       }
+    logger.info(s"schemaProvider:\n$sp")
 
     logger.debug(s"Creating fixed thread pool with size ${cfg.parallelism}")
     val executorService = Executors.newFixedThreadPool(cfg.parallelism)
 
     logger.debug(s"Starting to write")
     val rowCount = write(sample.iterator ++ lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp, gcs,
-      executorService, cfg.parallelism)
+      executorService, cfg.parallelism, cfg.errorLimit)
     src.close
     logger.info(s"Wrote $rowCount rows")
 
@@ -153,7 +157,8 @@ object OSC extends Logging {
             schemaProvider: SchemaProvider,
             gcs: Storage,
             executor: ExecutorService,
-            parallelism: Int = 4): Long = {
+            parallelism: Int = 4,
+            errorLimit: Long = 0): Long = {
     val orcConfig = {
       val c = new Configuration(false)
       OrcConf.COMPRESS.setString(c, "ZLIB")
@@ -179,7 +184,7 @@ object OSC extends Logging {
     val indices = (0 until parallelism).toArray
     val appenders = indices.map{i =>
       val id = i.toString
-      new OrcAppender(schemaProvider, delimiter, writerOptions, partSize, baseUri, stats, id, batchSize)
+      new OrcAppender(schemaProvider, delimiter, writerOptions, partSize, baseUri, stats, id, batchSize, errorLimit)
     }
     val queues = indices.map(_ => Queues.newArrayBlockingQueue[Array[String]](64))
     val futures = indices
@@ -220,8 +225,10 @@ object OSC extends Logging {
         val batch = queue.take()
         if (batch.isEmpty)
           continue = false
-        else
-          rows += orc.append(batch)
+        else {
+          val result = orc.append(batch)
+          rows += result.rowId
+        }
       }
       orc.close()
       rows

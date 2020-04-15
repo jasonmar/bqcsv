@@ -98,6 +98,11 @@ object OSCConfigParser extends OptionParser[OSCConfig]("OSC") {
     .text("(optional) parallelism (default: 1)")
     .validate(x => if (x > 0) success else failure("parallelism must be positive"))
 
+  opt[Int]("errorLimit")
+    .optional
+    .action{(x,c) => c.copy(errorLimit = x)}
+    .text("(optional) maximum number of errors per thread (default: 0)")
+
   opt[String]("delimiter")
     .optional
     .text("(optional) delimiter character")
