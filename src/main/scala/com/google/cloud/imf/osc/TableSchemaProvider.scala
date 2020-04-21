@@ -17,7 +17,7 @@
 package com.google.cloud.imf.osc
 
 import com.google.cloud.bigquery.{Field, Schema, StandardTableDefinition, Table}
-import com.google.cloud.imf.osc.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
+import com.google.cloud.imf.osc.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2, TimestampDecoderZoned}
 
 import scala.jdk.CollectionConverters.IterableHasAsScala
 
@@ -67,9 +67,11 @@ object TableSchemaProvider extends Logging {
       case (DATETIME,Some(zoneId)) if zoneId.contains('/') =>
         TimestampDecoder2(zoneId = zoneId)
       case (TIMESTAMP,Some(format)) =>
-        TimestampDecoder(format)
+        if (format.contains(Decoders.Offset)) TimestampDecoder(format)
+        else TimestampDecoderZoned(format)
       case (DATETIME,Some(format)) =>
-        TimestampDecoder(format)
+        if (format.contains(Decoders.Offset)) TimestampDecoder(format)
+        else TimestampDecoderZoned(format)
       case (DATE,_) =>
         DateDecoder()
       case (TIMESTAMP,_) =>

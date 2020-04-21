@@ -17,7 +17,7 @@
 package com.google.cloud.imf.osc
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDateTime, ZoneId, ZonedDateTime}
+import java.time.{LocalDateTime, OffsetDateTime, ZoneId, ZonedDateTime}
 
 import com.google.cloud.imf.osc.Decoders.{DecimalDecoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -25,7 +25,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 class DecoderSpec extends AnyFlatSpec {
   "decoder" should "parse timestamp" in {
     val pattern = "yyyy-MM-dd HH:mm:ssz"
-    val pattern2 = "yyyy-MM-dd HH:mm:ss"
+    val pattern2 = Decoders.LocalFormat
     val example = "2006-01-02 03:04:05+00:00"
     val example2 = "2006-01-02 03:04:05"
     val fmt = DateTimeFormatter.ofPattern(pattern)
@@ -35,6 +35,44 @@ class DecoderSpec extends AnyFlatSpec {
     assert(t.toEpochSecond == t2.toEpochSecond)
     assert(t.getNano == 0)
     assert(t2.getNano == 0)
+  }
+
+  "timestamp decoder" should "offset" in {
+    val example = Seq(
+      ("2020-04-17 12:08:57+00:00",12),
+      ("2020-04-17 12:08:57+01:00",11),
+      ("2020-04-17 12:08:57-07:00",19),
+      ("2020-04-17 12:08:57-08:00",20)
+    )
+    val fmt = DateTimeFormatter.ofPattern(Decoders.OffsetFormat)
+    for (e <- example){
+      val timestamp = OffsetDateTime.from(fmt.parse(e._1))
+      val utcTimeStamp = timestamp.atZoneSameInstant(Decoders.UTC)
+      System.out.println(timestamp.getOffset)
+      System.out.println(utcTimeStamp.getOffset)
+      System.out.println(timestamp.getHour)
+      System.out.println(utcTimeStamp.getHour)
+      assert(utcTimeStamp.getHour == e._2)
+    }
+  }
+
+  it should "zone" in {
+    val example = Seq(
+      ("2020-04-17 12:08:57 UTC+00:00",12),
+      ("2020-04-17 12:08:57 UTC+01:00",11),
+      ("2020-04-17 12:08:57 UTC-07:00",19),
+      ("2020-04-17 12:08:57 UTC-08:00",20)
+    )
+    val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z")
+    for (e <- example){
+      val timestamp = ZonedDateTime.from(fmt.parse(e._1))
+      val utcTimestamp = timestamp.withZoneSameInstant(Decoders.UTC)
+      System.out.println(timestamp.getOffset)
+      System.out.println(timestamp.getHour)
+      System.out.println(utcTimestamp.getOffset)
+      System.out.println(utcTimestamp.getHour)
+      assert(utcTimestamp.getHour == e._2)
+    }
   }
 
   it should "parse schema" in {

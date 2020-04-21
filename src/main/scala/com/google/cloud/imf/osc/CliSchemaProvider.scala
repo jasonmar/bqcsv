@@ -18,7 +18,7 @@ package com.google.cloud.imf.osc
 
 import com.google.cloud.bigquery.StandardSQLTypeName._
 import com.google.cloud.bigquery.{Field, Schema, StandardSQLTypeName}
-import com.google.cloud.imf.osc.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
+import com.google.cloud.imf.osc.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2, TimestampDecoderZoned}
 
 import scala.collection.immutable.ArraySeq
 
@@ -81,7 +81,8 @@ object CliSchemaProvider {
         case DATE if format == "" =>
            DateDecoder()
         case TIMESTAMP|DATETIME if format.nonEmpty && timezone.isEmpty =>
-          TimestampDecoder(format)
+          if (format.contains(Decoders.Offset)) TimestampDecoder(format)
+          else TimestampDecoderZoned(format)
         case TIMESTAMP|DATETIME if format.isEmpty && timezone.isEmpty =>
           TimestampDecoder()
         case TIMESTAMP|DATETIME if timezone.isDefined && format.nonEmpty =>

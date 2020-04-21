@@ -18,7 +18,7 @@ package com.google.cloud.imf.osc
 
 import java.time.format.DateTimeFormatter
 
-import com.google.cloud.imf.osc.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
+import com.google.cloud.imf.osc.Decoders.{DateDecoder, DecimalDecoder, Float64Decoder, Int64Decoder, StringDecoder, TimestampDecoder, TimestampDecoder2, TimestampDecoderZoned}
 
 import scala.util.Try
 
@@ -50,14 +50,14 @@ object SchemaInference {
   private val DatePattern2 = "yyyyMMdd"
   private val DatePattern3 = "yyyy/MM/dd"
   private val DatePattern4 = "MM/dd/yyyy"
-  private val TimeStampPattern = "yyyy-MM-dd HH:mm:ss"
-  private val ZonedTimeStampPattern = "yyyy-MM-dd HH:mm:ssz"
   private val DateFormatter = DateTimeFormatter.ofPattern(DatePattern)
   private val DateFormatter2 = DateTimeFormatter.ofPattern(DatePattern2)
   private val DateFormatter3 = DateTimeFormatter.ofPattern(DatePattern3)
   private val DateFormatter4 = DateTimeFormatter.ofPattern(DatePattern4)
-  private val TimeStampFormatter = DateTimeFormatter.ofPattern(TimeStampPattern)
-  private val ZonedTimeStampFormatter = DateTimeFormatter.ofPattern(ZonedTimeStampPattern)
+  private val TimeStampFormatter = DateTimeFormatter.ofPattern(Decoders.LocalFormat)
+  private val ZonedTimeStampFormatter = DateTimeFormatter.ofPattern(Decoders.ZoneFormat2)
+  private val ZonedTimeStampFormatter2 = DateTimeFormatter.ofPattern(Decoders.ZoneFormat)
+  private val OffsetTimeStampFormatter = DateTimeFormatter.ofPattern(Decoders.OffsetFormat)
 
   private val formatters = Seq(
     (DateFormatter,DatePattern),
@@ -71,6 +71,12 @@ object SchemaInference {
 
   def isZonedTimestamp(s: String): Boolean =
     Try(ZonedTimeStampFormatter.parse(s)).isSuccess
+
+  def isZonedTimestamp2(s: String): Boolean =
+    Try(ZonedTimeStampFormatter2.parse(s)).isSuccess
+
+  def isOffsetTimestamp(s: String): Boolean =
+    Try(OffsetTimeStampFormatter.parse(s)).isSuccess
 
   def getDateFormat(s: String): Option[(DateTimeFormatter,String)] = {
     formatters.find{x =>
@@ -113,9 +119,13 @@ object SchemaInference {
         else Float64Decoder()
       } else StringDecoder(maxLength)
     } else if (col.forall(isZonedTimestamp)){
-      TimestampDecoder(ZonedTimeStampPattern)
+      TimestampDecoderZoned(Decoders.ZoneFormat)
+    } else if (col.forall(isZonedTimestamp2)){
+      TimestampDecoderZoned(Decoders.ZoneFormat)
+    } else if (col.forall(isOffsetTimestamp)){
+      TimestampDecoder(Decoders.OffsetFormat)
     } else if (col.forall(isTimestamp)) {
-      TimestampDecoder2(TimeStampPattern, zoneId)
+      TimestampDecoder2(Decoders.LocalFormat, zoneId)
     } else {
       val fmt = dateFormat(col)
       if (fmt.isDefined){

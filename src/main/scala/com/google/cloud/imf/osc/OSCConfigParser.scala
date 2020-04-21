@@ -90,7 +90,7 @@ object OSCConfigParser extends OptionParser[OSCConfig]("OSC") {
   opt[String]("zoneId")
     .optional
     .action{(x,c) => c.copy(zoneId = x)}
-    .text("(optional) time zone ID https://www.iana.org/time-zones (default: America/Chicago)")
+    .text("(optional) time zone ID https://www.iana.org/time-zones (default: America/Los_Angeles)")
 
   opt[Int]("parallelism")
     .optional
@@ -105,7 +105,7 @@ object OSCConfigParser extends OptionParser[OSCConfig]("OSC") {
 
   opt[String]("delimiter")
     .optional
-    .text("(optional) delimiter character")
+    .text("(optional) delimiter character (default: þ)")
     .action{(x,c) => c.copy(delimiter = x.head)}
 
   opt[String]("templateTableSpec")
