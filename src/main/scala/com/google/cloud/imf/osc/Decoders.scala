@@ -141,7 +141,7 @@ object Decoders {
         tcv.isNull.update(i, true)
         if (!tcv.noNulls) tcv.noNulls = false
       } else {
-        val timestamp = OffsetDateTime.from(fmt.parse(s.trim))
+        val timestamp = OffsetDateTime.from(fmt.parse(s.trim)).atZoneSameInstant(UTC)
         tcv.time.update(i, Timestamp.valueOf(timestamp.toLocalDateTime).getTime)
         tcv.nanos.update(i, 0)
       }
@@ -165,7 +165,7 @@ object Decoders {
         tcv.isNull.update(i, true)
         if (!tcv.noNulls) tcv.noNulls = false
       } else {
-        val timestamp = ZonedDateTime.from(fmt.parse(s.trim))
+        val timestamp = ZonedDateTime.from(fmt.parse(s.trim)).withZoneSameInstant(UTC)
         tcv.time.update(i, Timestamp.valueOf(timestamp.toLocalDateTime).getTime)
         tcv.nanos.update(i, 0)
       }
@@ -190,7 +190,7 @@ object Decoders {
         tcv.isNull.update(i, true)
         if (!tcv.noNulls) tcv.noNulls = false
       } else {
-        val timestamp = LocalDateTime.from(fmt.parse(s.trim)).atZone(zone)
+        val timestamp = LocalDateTime.from(fmt.parse(s.trim)).atZone(zone).withZoneSameInstant(UTC)
         tcv.time.update(i, Timestamp.valueOf(timestamp.toLocalDateTime).getTime)
         tcv.nanos.update(i, 0)
       }
