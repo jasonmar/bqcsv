@@ -27,6 +27,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class DecoderSpec extends AnyFlatSpec {
   Util.configureLogging(true)
+  System.setProperty("user.timezone", "Etc/UTC");
 
   "decoder" should "parse timestamp" in {
     val pattern = "yyyy-MM-dd HH:mm:ssz"
@@ -60,7 +61,8 @@ class DecoderSpec extends AnyFlatSpec {
     for (e <- example){
       val timestamp = OffsetDateTime.from(fmt.parse(e._1))
       val utcTimeStamp = timestamp.atZoneSameInstant(Decoders.UTC)
-      System.out.println(timestamp.toEpochSecond / 3600)
+
+      System.out.println(s"${e._1} ${Timestamp.valueOf(timestamp.toLocalDateTime)} ${timestamp.toInstant.getEpochSecond / 3600} ${timestamp.toEpochSecond / 3600} ${utcTimeStamp.getHour}")
       assert(timestamp.getHour == e._2)
       assert(utcTimeStamp.getHour == e._3)
     }

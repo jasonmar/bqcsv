@@ -3,11 +3,12 @@ set -e
 set -x
 
 lib='target/scala-2.13'
-version='0.3.7-SNAPSHOT'
+version='0.3.8-SNAPSHOT'
+depversion='0.3.8-SNAPSHOT'
 project='project'
 bucket='bucket'
 
-CP="$lib/open-systems-connector_2.13-$version.jar:$lib/open-systems-connector-assembly-$version-deps.jar"
+CP="$lib/open-systems-connector_2.13-${version}.jar:$lib/open-systems-connector-assembly-${depversion}-deps.jar"
 
 java -cp "$CP" com.google.cloud.imf.OSC \
   --replace \

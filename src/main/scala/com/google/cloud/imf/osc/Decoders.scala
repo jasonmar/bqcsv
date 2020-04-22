@@ -17,6 +17,7 @@
 package com.google.cloud.imf.osc
 
 import java.nio.charset.StandardCharsets.UTF_8
+import java.sql.Timestamp
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, OffsetDateTime, ZoneId, ZonedDateTime}
 
@@ -141,7 +142,7 @@ object Decoders {
         if (!tcv.noNulls) tcv.noNulls = false
       } else {
         val timestamp = OffsetDateTime.from(fmt.parse(s.trim))
-        tcv.time.update(i, timestamp.toEpochSecond*1000L)
+        tcv.time.update(i, Timestamp.valueOf(timestamp.toLocalDateTime).getTime)
         tcv.nanos.update(i, 0)
       }
     }
@@ -165,7 +166,7 @@ object Decoders {
         if (!tcv.noNulls) tcv.noNulls = false
       } else {
         val timestamp = ZonedDateTime.from(fmt.parse(s.trim))
-        tcv.time.update(i, timestamp.toEpochSecond*1000L)
+        tcv.time.update(i, Timestamp.valueOf(timestamp.toLocalDateTime).getTime)
         tcv.nanos.update(i, 0)
       }
     }
@@ -190,7 +191,7 @@ object Decoders {
         if (!tcv.noNulls) tcv.noNulls = false
       } else {
         val timestamp = LocalDateTime.from(fmt.parse(s.trim)).atZone(zone)
-        tcv.time.update(i, timestamp.toEpochSecond * 1000L)
+        tcv.time.update(i, Timestamp.valueOf(timestamp.toLocalDateTime).getTime)
         tcv.nanos.update(i, 0)
       }
     }
