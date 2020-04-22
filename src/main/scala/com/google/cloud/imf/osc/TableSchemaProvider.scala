@@ -46,8 +46,7 @@ object TableSchemaProvider extends Logging {
       case (STRING,Some(len)) =>
         StringDecoder(len.toInt)
       case (STRING,_) =>
-        logger.warn("STRING max length not set - using default of 256")
-        StringDecoder(256)
+        StringDecoder()
       case (NUMERIC,None) =>
         logger.warn("NUMERIC precision and scale not set - using default of 18,5")
         DecimalDecoder(18,5)

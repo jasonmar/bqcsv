@@ -16,13 +16,18 @@
 
 package com.google.cloud.imf.osc
 
+import java.sql.Timestamp
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, OffsetDateTime, ZoneId, ZonedDateTime}
 
+import com.google.cloud.bigquery.{Field, FieldList, Schema, StandardSQLTypeName}
 import com.google.cloud.imf.osc.Decoders.{DecimalDecoder, StringDecoder, TimestampDecoder, TimestampDecoder2}
+import org.apache.hadoop.hive.ql.exec.vector.TimestampColumnVector
 import org.scalatest.flatspec.AnyFlatSpec
 
 class DecoderSpec extends AnyFlatSpec {
+  Util.configureLogging(true)
+
   "decoder" should "parse timestamp" in {
     val pattern = "yyyy-MM-dd HH:mm:ssz"
     val pattern2 = Decoders.LocalFormat
@@ -39,20 +44,60 @@ class DecoderSpec extends AnyFlatSpec {
 
   "timestamp decoder" should "offset" in {
     val example = Seq(
-      ("2020-04-17 12:08:57+00:00",12),
-      ("2020-04-17 12:08:57+01:00",11),
-      ("2020-04-17 12:08:57-07:00",19),
-      ("2020-04-17 12:08:57-08:00",20)
+      ("2020-04-17 12:08:57+00:00",12,12),
+      ("2020-04-17 12:08:57+01:00",12,11),
+      ("2020-04-17 12:08:57-00:00",12,12),
+      ("2020-04-17 12:08:57-01:00",12,13),
+      ("2020-04-17 12:08:57-02:00",12,14),
+      ("2020-04-17 12:08:57-03:00",12,15),
+      ("2020-04-17 12:08:57-04:00",12,16),
+      ("2020-04-17 12:08:57-05:00",12,17),
+      ("2020-04-17 12:08:57-06:00",12,18),
+      ("2020-04-17 12:08:57-07:00",12,19),
+      ("2020-04-17 12:08:57-08:00",12,20)
     )
     val fmt = DateTimeFormatter.ofPattern(Decoders.OffsetFormat)
     for (e <- example){
       val timestamp = OffsetDateTime.from(fmt.parse(e._1))
       val utcTimeStamp = timestamp.atZoneSameInstant(Decoders.UTC)
-      System.out.println(timestamp.getOffset)
-      System.out.println(utcTimeStamp.getOffset)
-      System.out.println(timestamp.getHour)
-      System.out.println(utcTimeStamp.getHour)
-      assert(utcTimeStamp.getHour == e._2)
+      System.out.println(timestamp.toEpochSecond / 3600)
+      assert(timestamp.getHour == e._2)
+      assert(utcTimeStamp.getHour == e._3)
+    }
+  }
+
+  "timestamp decoder" should "zone2" in {
+    val sp = new TableSchemaProvider(Schema.of(FieldList.of(Seq[Field](
+      Field.of("a", StandardSQLTypeName.STRING),
+      Field.of("b", StandardSQLTypeName.TIMESTAMP),
+      Field.of("c", StandardSQLTypeName.TIMESTAMP)
+    ):_*)))
+    val example = TestUtil.resource("sample2.txt")
+    val decoders = sp.decoders
+    val cols = decoders.map(_.columnVector(12))
+    val lines = example.linesIterator.toArray
+    var i = 0
+    var j = 0
+    while (j < lines.length) {
+      val fields = lines(j).split('þ')
+      i = 0
+      while (i < decoders.length) {
+        val decoder = decoders(i)
+        val col = cols(i)
+        decoder.get(fields(i), col, j)
+        (decoder,col) match {
+          case (_: TimestampDecoder, x: TimestampColumnVector) if i == 1 =>
+            val t = x.time(j)
+            val epochHour = t/3600000
+            val ts = new Timestamp(t)
+            val msg = s"$i $j $epochHour ${ts.toString()}"
+            System.out.println(msg)
+            assert(epochHour == 440821 + j)
+          case _ =>
+        }
+        i += 1
+      }
+      j += 1
     }
   }
 
@@ -67,10 +112,6 @@ class DecoderSpec extends AnyFlatSpec {
     for (e <- example){
       val timestamp = ZonedDateTime.from(fmt.parse(e._1))
       val utcTimestamp = timestamp.withZoneSameInstant(Decoders.UTC)
-      System.out.println(timestamp.getOffset)
-      System.out.println(timestamp.getHour)
-      System.out.println(utcTimestamp.getOffset)
-      System.out.println(utcTimestamp.getHour)
       assert(utcTimestamp.getHour == e._2)
     }
   }

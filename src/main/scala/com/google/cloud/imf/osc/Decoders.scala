@@ -35,6 +35,7 @@ object Decoders {
         if (!bcv.noNulls) bcv.noNulls = false
       } else {
         val bytes = s.getBytes(UTF_8)
+        bcv.ensureValPreallocated(bytes.length)
         val dst = bcv.getValPreallocatedBytes
         val dstPos = bcv.getValPreallocatedStart
         System.arraycopy(bytes, 0, dst, dstPos, bytes.length)
@@ -49,7 +50,10 @@ object Decoders {
     }
 
     override def typeDescription: TypeDescription =
-      TypeDescription.createChar.withMaxLength(length)
+      if (length > 0)
+        TypeDescription.createVarchar().withMaxLength(length)
+      else
+        TypeDescription.createString()
 
     override def bqType: StandardSQLTypeName = StandardSQLTypeName.STRING
   }
@@ -137,7 +141,6 @@ object Decoders {
         if (!tcv.noNulls) tcv.noNulls = false
       } else {
         val timestamp = OffsetDateTime.from(fmt.parse(s.trim))
-            .atZoneSameInstant(Decoders.UTC)
         tcv.time.update(i, timestamp.toEpochSecond*1000L)
         tcv.nanos.update(i, 0)
       }
@@ -162,7 +165,6 @@ object Decoders {
         if (!tcv.noNulls) tcv.noNulls = false
       } else {
         val timestamp = ZonedDateTime.from(fmt.parse(s.trim))
-          .withZoneSameInstant(Decoders.UTC)
         tcv.time.update(i, timestamp.toEpochSecond*1000L)
         tcv.nanos.update(i, 0)
       }
@@ -187,9 +189,7 @@ object Decoders {
         tcv.isNull.update(i, true)
         if (!tcv.noNulls) tcv.noNulls = false
       } else {
-        val timestamp = LocalDateTime.from(fmt.parse(s.trim))
-          .atZone(zone)
-          .withZoneSameInstant(Decoders.UTC)
+        val timestamp = LocalDateTime.from(fmt.parse(s.trim)).atZone(zone)
         tcv.time.update(i, timestamp.toEpochSecond * 1000L)
         tcv.nanos.update(i, 0)
       }

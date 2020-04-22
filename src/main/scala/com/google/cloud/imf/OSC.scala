@@ -64,9 +64,12 @@ object OSC extends Logging {
         logger.info(s"Getting schema from destination table ${cfg.destTableSpec}")
         destTableId
       }
+    logger.debug(s"getting table: $templateTableId")
     val table = Option(bq.getTable(templateTableId))
+    logger.debug(s"table: $table")
 
     val schema = table.map(_.getDefinition[StandardTableDefinition].getSchema)
+    logger.debug(s"schema: $schema")
 
     val lines = src.getLines
     val sample = lines.take(cfg.sampleSize).toArray
@@ -91,7 +94,7 @@ object OSC extends Logging {
     val sp: SchemaProvider =
       if (cfg.autodetect){
         AutoDetectProvider.get(cfg, sample, schema)
-      } else if (cfg.templateTableSpec.nonEmpty) {
+      } else if (cfg.templateTableSpec.nonEmpty || schema.nonEmpty) {
         if (schema.isEmpty)
           throw new RuntimeException(s"template table ${cfg.templateTableSpec} doesn't exist")
         TableSchemaProvider(schema.get)
