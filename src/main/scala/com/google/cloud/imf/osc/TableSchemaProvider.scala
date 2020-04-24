@@ -21,10 +21,11 @@ import com.google.cloud.imf.osc.Decoders.{DateDecoder, DecimalDecoder, Float64De
 
 import scala.jdk.CollectionConverters.IterableHasAsScala
 
-case class TableSchemaProvider(schema: Schema) extends SchemaProvider {
+case class TableSchemaProvider(schema: Schema, zoneId: String) extends SchemaProvider {
   val fields: Seq[Field] = schema.getFields.asScala.toIndexedSeq
   override val fieldNames: Seq[String] = fields.map(_.getName.toLowerCase)
-  override val decoders: Array[Decoder] = fields.map(TableSchemaProvider.decoder).toArray
+  override val decoders: Array[Decoder] =
+    fields.map(TableSchemaProvider.decoder(_, zoneId)).toArray
   override def bqSchema: Schema = schema
 
   override def toString: String =
@@ -34,13 +35,13 @@ case class TableSchemaProvider(schema: Schema) extends SchemaProvider {
 }
 
 object TableSchemaProvider extends Logging {
-  def apply(table: Table): TableSchemaProvider = {
+  def apply(table: Table, zoneId: String): TableSchemaProvider = {
     val schema = table.getDefinition[StandardTableDefinition].getSchema
-    TableSchemaProvider(schema)
+    TableSchemaProvider(schema, zoneId)
   }
 
   import com.google.cloud.bigquery.StandardSQLTypeName._
-  def decoder(field: Field): Decoder = {
+  def decoder(field: Field, zoneId: String): Decoder = {
     logger.debug(s"${field.getName} ${field.getType.getStandardType} ${field.getDescription} ")
     (field.getType.getStandardType,Option(field.getDescription)) match {
       case (STRING,Some(len)) =>
@@ -64,19 +65,19 @@ object TableSchemaProvider extends Logging {
         val Array(zoneId,format) = args.split('|')
         TimestampDecoder2(format, zoneId)
       case (DATETIME,Some(zoneId)) if zoneId.contains('/') =>
-        TimestampDecoder2(zoneId = zoneId)
+        TimestampDecoder2(Decoders.LocalFormat, zoneId = zoneId)
       case (TIMESTAMP,Some(format)) =>
         if (format.contains(Decoders.Offset)) TimestampDecoder(format)
         else TimestampDecoderZoned(format)
       case (DATETIME,Some(format)) =>
         if (format.contains(Decoders.Offset)) TimestampDecoder(format)
-        else TimestampDecoderZoned(format)
+        else TimestampDecoder2(format, zoneId)
       case (DATE,_) =>
         DateDecoder()
       case (TIMESTAMP,_) =>
         TimestampDecoder()
       case (DATETIME,_) =>
-        TimestampDecoder()
+        TimestampDecoder2(Decoders.LocalFormat, zoneId)
       case (INT64,_) =>
         Int64Decoder()
       case (FLOAT64,_) =>

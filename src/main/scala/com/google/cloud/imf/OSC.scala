@@ -97,7 +97,7 @@ object OSC extends Logging {
       } else if (cfg.templateTableSpec.nonEmpty || schema.nonEmpty) {
         if (schema.isEmpty)
           throw new RuntimeException(s"template table ${cfg.templateTableSpec} doesn't exist")
-        TableSchemaProvider(schema.get)
+        TableSchemaProvider(schema.get, cfg.zoneId)
       } else {
         CliSchemaProvider(cfg.schema)
       }
