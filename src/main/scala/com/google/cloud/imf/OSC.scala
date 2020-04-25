@@ -30,7 +30,10 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.orc.{CompressionKind, OrcConf, OrcFile}
 
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.io.Source
+import scala.util.{Failure, Try}
 
 object OSC extends Logging {
   def main(args: Array[String]): Unit = {
@@ -103,12 +106,13 @@ object OSC extends Logging {
       }
     logger.info(s"schemaProvider:\n$sp")
 
-    logger.debug(s"Creating fixed thread pool with size ${cfg.parallelism}")
-    val executorService = Executors.newFixedThreadPool(cfg.parallelism)
+    logger.debug(s"Creating thread pool with size ${cfg.parallelism}")
+    implicit val ec: ExecutionContext = ExecutionContext
+      .fromExecutorService(Executors.newWorkStealingPool(cfg.parallelism))
 
     logger.debug(s"Starting to write")
     val rowCount = write(sample.iterator ++ lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp, gcs,
-      executorService, cfg.parallelism, cfg.errorLimit)
+      cfg.parallelism, cfg.errorLimit)
     src.close
     logger.info(s"Wrote $rowCount rows")
 
@@ -159,9 +163,9 @@ object OSC extends Logging {
             baseUri: java.net.URI,
             schemaProvider: SchemaProvider,
             gcs: Storage,
-            executor: ExecutorService,
             parallelism: Int = 4,
-            errorLimit: Long = 0): Long = {
+            errorLimit: Long = 0)
+           (implicit ec: ExecutionContext): Long = {
     val orcConfig = {
       val c = new Configuration(false)
       OrcConf.COMPRESS.setString(c, "ZLIB")
@@ -184,15 +188,15 @@ object OSC extends Logging {
       .fileSystem(new SimpleGCSFileSystem(gcs, stats))
 
     val batchSize = 1024
-    val indices = (0 until parallelism).toArray
+    val indices = 0 until parallelism
     val appenders = indices.map{i =>
       val id = i.toString
       new OrcAppender(schemaProvider, delimiter, writerOptions, partSize, baseUri, stats, id, batchSize, errorLimit)
     }
     val queues = indices.map(_ => Queues.newArrayBlockingQueue[Array[String]](64))
-    val futures = indices
-      .map{i => new ORCAppendCallable(appenders(i), queues(i))}
-      .map(executor.submit(_))
+    val futures = indices.map{i => Future{
+      new ORCAppendCallable(appenders(i), queues(i)).call()
+    }}
 
     var i = 0
     var rows = 0L
@@ -206,21 +210,29 @@ object OSC extends Logging {
     }
     queues.foreach(_.put(Array.empty))
 
-    val rowsWritten = futures.map(_.get(10, TimeUnit.MINUTES)).foldLeft(0L)(_+_)
-    executor.shutdown()
-    executor.awaitTermination(10, TimeUnit.SECONDS)
+    val results = Await.result(Future.sequence(futures), Duration(10, TimeUnit.MINUTES))
+
+    val rowsWritten = results.foldLeft(0L)(_ + _.getOrElse(0L))
+    logger.debug(s"$rowsWritten rows written")
 
     if (rowsWritten != rows)
-      logger.warn(s"rows read does not match rows written ($rows != $rowsWritten)")
+      logger.error(s"rows read does not match rows written ($rows != $rowsWritten)")
 
-    logger.debug(s"$rowsWritten rows written")
+    for (r <- results){
+      r match {
+        case Failure(e) =>
+          logger.error(e.getMessage,e)
+          throw e
+        case _ =>
+      }
+    }
     rows
   }
 
   private class ORCAppendCallable(orc: OrcAppender,
                                   queue: ArrayBlockingQueue[Array[String]])
-    extends Callable[Long] {
-    override def call(): Long = {
+    extends Callable[Try[Long]] {
+    override def call(): Try[Long] = Try{
       var rows: Long = 0
       val t = Thread.currentThread
       var continue = true
