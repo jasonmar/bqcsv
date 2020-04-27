@@ -111,10 +111,19 @@ object OSC extends Logging {
       .fromExecutorService(Executors.newWorkStealingPool(cfg.parallelism))
 
     logger.debug(s"Starting to write")
-    val rowCount = write(sample.iterator ++ lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp, gcs,
-      cfg.parallelism, cfg.errorLimit)
+    val result = write(sample.iterator ++ lines, cfg.partSizeMB*MegaByte, cfg.delimiter, uri, sp,
+      gcs, cfg.parallelism, cfg.errorLimit)
+
+    val rowCount = result.foldLeft(0L){(a,b) => a + b.getOrElse(0L)}
     src.close
     logger.info(s"Wrote $rowCount rows")
+
+    result.foreach{
+      case Failure(e) =>
+        logger.error(e.getMessage, e)
+        throw e
+      case _ =>
+    }
 
     if (cfg.external){
       logger.info("Registering External Table")
@@ -165,7 +174,7 @@ object OSC extends Logging {
             gcs: Storage,
             parallelism: Int = 4,
             errorLimit: Long = 0)
-           (implicit ec: ExecutionContext): Long = {
+           (implicit ec: ExecutionContext): IndexedSeq[Try[Long]] = {
     val orcConfig = {
       val c = new Configuration(false)
       OrcConf.COMPRESS.setString(c, "ZLIB")
@@ -191,7 +200,8 @@ object OSC extends Logging {
     val indices = 0 until parallelism
     val appenders = indices.map{i =>
       val id = i.toString
-      new OrcAppender(schemaProvider, delimiter, writerOptions, partSize, baseUri, stats, id, batchSize, errorLimit)
+      new OrcAppender(schemaProvider, delimiter, writerOptions, partSize, baseUri, stats, id,
+        batchSize, errorLimit)
     }
     val queues = indices.map(_ => Queues.newArrayBlockingQueue[Array[String]](64))
     val futures = indices.map{i => Future{
@@ -218,15 +228,7 @@ object OSC extends Logging {
     if (rowsWritten != rows)
       logger.error(s"rows read does not match rows written ($rows != $rowsWritten)")
 
-    for (r <- results){
-      r match {
-        case Failure(e) =>
-          logger.error(e.getMessage,e)
-          throw e
-        case _ =>
-      }
-    }
-    rows
+    results
   }
 
   private class ORCAppendCallable(orc: OrcAppender,
