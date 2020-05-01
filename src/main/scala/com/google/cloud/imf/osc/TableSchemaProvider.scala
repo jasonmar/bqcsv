@@ -61,27 +61,19 @@ object TableSchemaProvider extends Logging {
         TimestampDecoder2(format, zoneId)
       case (TIMESTAMP,Some(zoneId)) if zoneId.contains('/') =>
         TimestampDecoder2(zoneId = zoneId)
-      case (DATETIME,Some(args)) if args.contains('|') =>
-        val Array(zoneId,format) = args.split('|')
-        TimestampDecoder2(format, zoneId)
-      case (DATETIME,Some(zoneId)) if zoneId.contains('/') =>
-        TimestampDecoder2(Decoders.LocalFormat, zoneId = zoneId)
       case (TIMESTAMP,Some(format)) =>
         if (format.contains(Decoders.Offset)) TimestampDecoder(format)
         else TimestampDecoderZoned(format)
-      case (DATETIME,Some(format)) =>
-        if (format.contains(Decoders.Offset)) TimestampDecoder(format)
-        else TimestampDecoder2(format, zoneId)
       case (DATE,_) =>
         DateDecoder()
       case (TIMESTAMP,_) =>
         TimestampDecoder()
-      case (DATETIME,_) =>
-        TimestampDecoder2(Decoders.LocalFormat, zoneId)
       case (INT64,_) =>
         Int64Decoder()
       case (FLOAT64,_) =>
         Float64Decoder()
+      case (t,_) =>
+        throw new UnsupportedOperationException(s"Loading of $t columns from ORC is not supported")
     }
   }
 }
