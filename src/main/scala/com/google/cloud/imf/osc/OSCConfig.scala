@@ -16,7 +16,7 @@
 
 package com.google.cloud.imf.osc
 
-case class OSCConfig(source: String = "",
+case class OSCConfig(source: Seq[String] = Nil,
                      delimiter: Char = 'þ',
                      stagingUri: String = "",
                      destTableSpec: String = "",

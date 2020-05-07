@@ -73,7 +73,7 @@ class DecoderSpec extends AnyFlatSpec {
       Field.of("a", StandardSQLTypeName.STRING),
       Field.of("b", StandardSQLTypeName.TIMESTAMP),
       Field.of("c", StandardSQLTypeName.TIMESTAMP)
-    ):_*)))
+    ):_*)), "Etc/Utc")
     val example = TestUtil.resource("sample2.txt")
     val decoders = sp.decoders
     val cols = decoders.map(_.columnVector(12))

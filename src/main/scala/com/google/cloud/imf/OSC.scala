@@ -53,7 +53,7 @@ object OSC extends Logging {
   final val OptimalCompressBuffer: Int = 32*1024
 
   def run(cfg: OSCConfig): Status = {
-    val src = Source.fromFile(cfg.source, "UTF-8")
+    val sources = cfg.source.map(f => Source.fromFile(f, "UTF-8"))
     val credentials = GoogleCredentials.getApplicationDefault.createScoped(Util.Scopes)
     val bq: BigQuery = BQ.defaultClient(cfg.projectId, cfg.location, credentials)
     val destTableId = BQ.resolveTableSpec(cfg.destTableSpec,cfg.projectId,cfg.datasetId)
@@ -74,7 +74,7 @@ object OSC extends Logging {
     val schema = table.map(_.getDefinition[StandardTableDefinition].getSchema)
     logger.debug(s"schema: $schema")
 
-    val lines = src.getLines
+    val lines = sources.foldLeft(Seq.empty[String].iterator){_ ++ _.getLines()}
     val sample = lines.take(cfg.sampleSize).toArray
     val gcs = GCS.defaultClient(credentials)
     val uri = new java.net.URI(cfg.stagingUri)
@@ -115,7 +115,7 @@ object OSC extends Logging {
       gcs, cfg.parallelism, cfg.errorLimit)
 
     val rowCount = result.foldLeft(0L){(a,b) => a + b.getOrElse(0L)}
-    src.close
+    sources.foreach(_.close())
     logger.info(s"Wrote $rowCount rows")
 
     result.foreach{

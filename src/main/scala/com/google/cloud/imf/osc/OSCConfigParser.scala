@@ -118,18 +118,6 @@ object OSCConfigParser extends OptionParser[OSCConfig]("OSC") {
     .text("(optional) set logging level to debug")
     .action((_,c) => c.copy(debug = true))
 
-  arg[String]("source")
-    .required
-    .text("path to input file")
-    .validate{x =>
-      val path = Paths.get(x)
-      if (!Files.isRegularFile(path))
-        failure(s"$path not found")
-      else
-        success
-    }
-    .action((x, c) => c.copy(source = x))
-
   arg[String]("stagingUri")
     .required
     .text("GCS prefix where ORC files will be written in format gs://BUCKET/PREFIX")
@@ -150,4 +138,17 @@ object OSCConfigParser extends OptionParser[OSCConfig]("OSC") {
       else success
     )
     .action((x, c) => c.copy(destTableSpec = x))
+
+  arg[String]("source")
+    .required
+    .maxOccurs(1024)
+    .text("Path to input file (can be provided multiple times)")
+    .validate{x =>
+      val path = Paths.get(x)
+      if (!Files.isRegularFile(path))
+        failure(s"$path not found")
+      else
+        success
+    }
+    .action((x, c) => c.copy(source = c.source ++ Seq(x)))
 }

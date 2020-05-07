@@ -3,8 +3,8 @@ set -e
 set -x
 
 lib='target/scala-2.13'
-version='0.3.8-SNAPSHOT'
-depversion='0.3.8-SNAPSHOT'
+version='0.5.0-SNAPSHOT'
+depversion='0.5.0-SNAPSHOT'
 project='project'
 bucket='bucket'
 
