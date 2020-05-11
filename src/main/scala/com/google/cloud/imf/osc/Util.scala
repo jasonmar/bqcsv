@@ -27,6 +27,7 @@ object Util {
       LogManager.getLogger("org.apache.orc.impl").setLevel(Level.ERROR)
       LogManager.getLogger("org.apache.http").setLevel(Level.WARN)
       LogManager.getLogger("org.apache.hadoop.util").setLevel(Level.ERROR)
+      LogManager.getLogger("io.grpc").setLevel(Level.WARN)
     }
 
     if (sys.env.get("BQCSV_ROOT_LOGGER").contains("DEBUG") || debug) {

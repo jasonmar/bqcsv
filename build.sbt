@@ -15,7 +15,7 @@
  */
 organization := "com.google.cloud.imf"
 name := "open-systems-connector"
-version := "0.5.0-SNAPSHOT"
+version := "0.6.0-SNAPSHOT"
 scalaVersion := "2.13.1"
 publishMavenStyle := true
 
@@ -35,6 +35,7 @@ libraryDependencies ++= Seq(
   "com.google.auto.value"     % "auto-value-annotations" % "1.7", // provided for google-cloud-bigquery
   "com.google.http-client"    % "google-http-client-apache-v2" % "1.34.2",
   "com.google.cloud"          % "google-cloud-bigquery" % "1.108.1",
+  "com.google.cloud"          % "google-cloud-bigquerystorage" % "0.131.2-beta",
   "com.google.cloud"          % "google-cloud-compute" % "0.117.0-alpha",
   "com.google.cloud"          % "google-cloud-storage" % "1.106.0",
   "com.google.protobuf"       % "protobuf-java" % "3.11.4",

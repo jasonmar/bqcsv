@@ -27,7 +27,7 @@ import scala.collection.immutable.ArraySeq
 object OSCConfigParser extends OptionParser[OSCConfig]("OSC") {
   def parse(args: Array[String]): Option[OSCConfig] = parse(ArraySeq.unsafeWrapArray(args), OSCConfig())
 
-  head("osc", "0.3")
+  head("osc", "0.6")
     .text("""Google Cloud Open Systems Connector
             |
             |*  Uploads delimited files to GCS as ORC
