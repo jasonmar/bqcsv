@@ -25,10 +25,15 @@ import org.apache.avro.generic.GenericRecord
 import scala.jdk.CollectionConverters._
 
 case class AvroField(field: Schema.Field) {
-  val typeSchema: Schema = field.schema().getTypes.asScala
-    .filterNot(_.getType == Schema.Type.NULL)
-    .toArray.toIndexedSeq.headOption
-    .getOrElse(Schema.create(Schema.Type.NULL))
+  val isRequired: Boolean = field.schema().getType != Schema.Type.UNION
+
+  val typeSchema: Schema =
+    if (isRequired)
+      field.schema()
+    else field.schema().getTypes.asScala
+      .filterNot(_.getType == Schema.Type.NULL)
+      .toArray.toIndexedSeq.headOption
+      .getOrElse(Schema.create(Schema.Type.NULL))
 
   // buffer for BigInteger values representing Decimal field
   @transient private val decimalBuf = new Array[Byte](16)
@@ -54,6 +59,11 @@ case class AvroField(field: Schema.Field) {
         sb.append(x)
       } else {
         val msg = s"unhandled type ${field.schema()} ${v.getClass.getCanonicalName}"
+        throw new RuntimeException(msg)
+      }
+    } else {
+      if (isRequired) {
+        val msg = s"missing required field ${field.name()}"
         throw new RuntimeException(msg)
       }
     }
