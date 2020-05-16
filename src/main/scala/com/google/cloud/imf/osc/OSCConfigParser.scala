@@ -144,11 +144,16 @@ object OSCConfigParser extends OptionParser[OSCConfig]("OSC") {
     .maxOccurs(1024)
     .text("Path to input file (can be provided multiple times)")
     .validate{x =>
-      val path = Paths.get(x)
-      if (!Files.isRegularFile(path))
-        failure(s"$path not found")
-      else
+      val paths = if (x.contains(',')){
+        x.split(',').toIndexedSeq
+      } else Seq(x)
+      if (paths.forall{path => Files.isRegularFile(Paths.get(path))})
         success
+      else
+        failure(s"source not found")
     }
-    .action((x, c) => c.copy(source = c.source ++ Seq(x)))
+    .action{(x, c) =>
+      val paths = if (x.contains(',')) x.split(',').toIndexedSeq else Seq(x)
+      c.copy(source = c.source ++ paths)
+    }
 }
