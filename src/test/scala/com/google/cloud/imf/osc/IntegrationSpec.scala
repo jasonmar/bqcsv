@@ -20,17 +20,19 @@ import com.google.cloud.imf.OSC
 import org.scalatest.flatspec.AnyFlatSpec
 
 class IntegrationSpec extends AnyFlatSpec {
-  "BqCsv" should "upload" in {
-    val args = Array("--replace",
+  "BqCsv" should "upload" ignore {
+    val args = Array(
+      "--replace",
       "--autodetect",
       "--debug",
       "--dataset", "dataset",
-      "--project", "project",
-      "src/test/resources/sample1.txt",
-      "gs://bucket/example2",
-      "project:dataset.table")
+      "--project", sys.env("PROJECT"),
+      s"gs://${sys.env("BUCKET")}/sample1.orc",
+      s"${sys.env("PROJECT")}:${sys.env("DATASET")}.${sys.env("TABLE")}",
+      "src/test/resources/sample1.txt")
     OSCConfigParser.parse(args) match {
       case Some(cfg) =>
+        Util.configureLogging(cfg.debug)
         OSC.run(cfg)
       case None =>
     }

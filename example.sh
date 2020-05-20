@@ -3,18 +3,19 @@ set -e
 set -x
 
 lib='target/scala-2.13'
-version='0.5.0-SNAPSHOT'
-depversion='0.5.0-SNAPSHOT'
-project='project'
-bucket='bucket'
+version=0.6.3-SNAPSHOT
+depversion=0.6.3-SNAPSHOT
+project=project
+bucket=bucket
+dataset=dataset
 
 CP="$lib/open-systems-connector_2.13-${version}.jar:$lib/open-systems-connector-assembly-${depversion}-deps.jar"
 
 java -cp "$CP" com.google.cloud.imf.OSC \
   --replace \
   --debug \
-  --dataset dataset \
-  --project $project \
-  src/test/resources/sample2.txt \
-  gs://$bucket/sample2 \
-  $project:dataset.test_table_2
+  --dataset ${dataset} \
+  --project ${project} \
+  gs://${bucket}/sample2 \
+  ${project}:${dataset}.test_table_2 \
+  src/test/resources/sample2.txt

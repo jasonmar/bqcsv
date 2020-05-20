@@ -33,7 +33,7 @@ object Decoders {
       if (s.isEmpty){
         bcv.isNull.update(i, true)
         bcv.setValPreallocated(i,0)
-        if (!bcv.noNulls) bcv.noNulls = false
+        if (bcv.noNulls) bcv.noNulls = false
       } else {
         val bytes = s.getBytes(UTF_8)
         bcv.ensureValPreallocated(bytes.length)
