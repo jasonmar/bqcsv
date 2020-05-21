@@ -27,7 +27,6 @@ import org.apache.avro.Schema
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.jdk.CollectionConverters._
 
 object BQExport extends Logging {
   def main(args: Array[String]): Unit = {
@@ -46,6 +45,7 @@ object BQExport extends Logging {
 
   def run(cfg: ExportConfig, client: BigQueryReadClient, gcs: Storage)
          (implicit ec: ExecutionContext): Unit = {
+    val startTime = System.currentTimeMillis
     try {
       logger.info(s"Exporting ${cfg.projectId}:${cfg.dataset}.${cfg.table} to ${cfg.destUri}")
       if (cfg.filter.nonEmpty)
@@ -74,28 +74,24 @@ object BQExport extends Logging {
           .build
 
         Future {
-          val responses: Array[ReadRowsResponse] =
-            client.readRowsCallable.call(readRowsRequest).asScala.toArray
-
-          val exporter = new BQExporter(schema, streamId, gcs, cfg.bucket, cfg.name, cfg.table)
-
           var rowCount: Long = 0
-          var i = 0
-          while (i < responses.length) {
-            val res = responses(i)
+          val exporter = new BQExporter(schema, streamId, gcs, cfg.bucket, cfg.name, cfg.table)
+          client.readRowsCallable.call(readRowsRequest).forEach{res =>
             if (res.hasAvroRows)
               rowCount += exporter.processRows(res.getAvroRows)
-            i += 1
           }
           exporter.close()
-          logger.info(s"Read $rowCount rows from stream $streamId")
+          logger.info(s"Stream $streamId closed after receiving $rowCount rows")
           rowCount
         }
       }
 
       val results = Await.result(Future.sequence(futures), Duration.Inf)
       val totalRowCount = results.foldLeft(0L){_ + _}
-      logger.info(s"Read $totalRowCount rows")
+      val endTime = System.currentTimeMillis
+      val elapsedSeconds = (endTime - startTime) / 1000L
+      logger.info(s"Finished - $totalRowCount total rows across ${session.getStreamsCount} " +
+        s"streams in $elapsedSeconds seconds")
     } finally {
       client.close()
     }

@@ -21,7 +21,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 import com.google.cloud.imf.osc.Decoders
-import io.grpc.netty.shaded.io.netty.buffer.ByteBuf
 import org.apache.avro.Schema
 
 object AvroUtil {

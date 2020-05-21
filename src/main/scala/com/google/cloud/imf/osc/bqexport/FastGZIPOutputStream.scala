@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
-package com.google.cloud.imf
+package com.google.cloud.imf.osc.bqexport
 
-object OSCE {
-  def main(args: Array[String]): Unit = {
+import java.io.OutputStream
+import java.util.zip.{Deflater, GZIPOutputStream}
 
-  }
+class FastGZIPOutputStream(os: OutputStream,
+                           syncFlush: Boolean)
+  extends GZIPOutputStream(os, 32*1024, syncFlush) {
+  this.`def`.setLevel(Deflater.BEST_SPEED);
 }

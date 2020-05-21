@@ -16,14 +16,9 @@
 
 package com.google.cloud.imf.osc.bqexport
 
-import java.io.{OutputStreamWriter, Writer}
-import java.nio.ByteBuffer
+import java.io.{BufferedOutputStream, OutputStreamWriter, Writer}
 import java.nio.channels.Channels
-import java.nio.charset.StandardCharsets
-import java.time.LocalDate
-import java.util.zip.GZIPOutputStream
 
-import com.google.cloud.WriteChannel
 import com.google.cloud.bigquery.storage.v1.AvroRows
 import com.google.cloud.imf.osc.Logging
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
@@ -31,7 +26,7 @@ import org.apache.avro.Schema
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 import org.apache.avro.io.{BinaryDecoder, DecoderFactory}
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.ListHasAsScala
 
 class BQExporter(schema: Schema,
                  id: Int,
@@ -39,6 +34,8 @@ class BQExporter(schema: Schema,
                  bucket: String,
                  name: String,
                  table: String) extends Logging {
+  private val fields: IndexedSeq[AvroField] =
+    schema.getFields.asScala.toArray.toIndexedSeq.map(AvroField)
   private val reader: GenericDatumReader[GenericRecord] =
     new GenericDatumReader[GenericRecord](schema)
   private var decoder: BinaryDecoder = _
@@ -47,33 +44,45 @@ class BQExporter(schema: Schema,
 
   // rows written across partitions
   private var rowCount: Long = 0
+  private val LogFreq: Long = 1000000
+  private var nextLog: Long = LogFreq
+  private val BufSz = 1024*1024
 
   // rows written to current partition
   private var partRowCount: Long = 0
 
-  // 50M rows per partition
-  private val PartRowLimit = 50L * 1000L * 1000L
+  // 10M rows per partition
+  private val PartRowLimit = 10L * 1000L * 1000L
 
   // buffer for current line
   private val sb: StringBuilder = new StringBuilder(128*1024)
 
   private var writer: Writer = _
+  private var objName: String = _
 
   def close(): Unit = {
     if (writer != null) {
       writer.close()
+      logger.info(s"Stream $id - gs://$bucket/$objName closed after writing " +
+        s"$partRowCount rows")
       writer = null
+      objName = null
     }
   }
 
   private def initWriter(): Unit = {
     if (partRowCount > PartRowLimit || writer == null){
       close()
-      val objName = s"$name/$table-$id-$part.csv.gz"
-      val obj = gcs.create(BlobInfo.newBuilder(BlobId.of(bucket, objName)).build())
-      logger.info(s"Stream $id - Opening WriteChannel to gs://$bucket/$objName")
-      writer = new OutputStreamWriter(new GZIPOutputStream(
-        Channels.newOutputStream(obj.writer()), 32*1024, true))
+      objName = s"$name/$table-$id-$part.csv.gz"
+      val obj = gcs.create(BlobInfo.newBuilder(BlobId.of(bucket, objName))
+        .setContentEncoding("gzip")
+        .setContentType("text/csv; charset=utf-8")
+        .build())
+      logger.info(s"Stream $id - writing to gs://$bucket/$objName")
+      writer = new OutputStreamWriter(
+        new BufferedOutputStream(
+          new FastGZIPOutputStream(Channels.newOutputStream(obj.writer()), true),
+          BufSz))
       part += 1
       partRowCount = 0
     }
@@ -81,10 +90,11 @@ class BQExporter(schema: Schema,
 
   def processRows(rows: AvroRows): Long = {
     decoder = DecoderFactory.get.binaryDecoder(rows.getSerializedBinaryRows.toByteArray, decoder)
-
+    if (rowCount >= nextLog) {
+      logger.info(s"Stream $id - $rowCount rows written")
+      nextLog += LogFreq
+    }
     initWriter()
-    val fields: IndexedSeq[AvroField] =
-      schema.getFields.asScala.toArray.toIndexedSeq.map(AvroField)
 
     // rows written to current batch
     var batchRowCount: Long = 0

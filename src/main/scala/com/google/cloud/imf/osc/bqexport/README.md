@@ -32,8 +32,9 @@ Usage: com.google.cloud.imf.BQExport [options]
 example
 
 ```sh
-java -Xms512m -Xmx512m \
-  -cp "open-systems-connector_2.13-0.6.0-SNAPSHOT.jar:open-systems-connector-assembly-0.6.0-SNAPSHOT-deps.jar"
+java -Xms1g -Xmx1g \
+  -cp "open-systems-connector_2.13-0.6.4-SNAPSHOT.jar:open-systems-connector-assembly-0.6.4-SNAPSHOT-deps.jar" \
+  com.google.cloud.imf.BQExport \
   --billingProject project \
   --projectId project \
   --dataset dataset \
