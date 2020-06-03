@@ -25,6 +25,8 @@ import com.google.cloud.bigquery.StandardSQLTypeName
 import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, DoubleColumnVector, LongColumnVector, TimestampColumnVector}
 import org.apache.orc.TypeDescription
 
+import scala.annotation.switch
+
 
 object Decoders {
   case class StringDecoder(length: Int = -1) extends Decoder {
@@ -66,8 +68,7 @@ object Decoders {
         lcv.isNull.update(i, true)
         if (!lcv.noNulls) lcv.noNulls = false
       } else {
-        val long = s.trim.toLong
-        lcv.vector.update(i, long)
+        lcv.vector.update(i, StringToNum.longValue(s.trim))
       }
     }
 
@@ -214,8 +215,7 @@ object Decoders {
         dcv.isNull.update(i, true)
         if (!dcv.noNulls) dcv.noNulls = false
       } else {
-        val long = s.trim.filter(c => c.isDigit || c == '-').toLong
-        dcv.vector.update(i, long)
+        dcv.vector.update(i, StringToNum.decimalValue(s, scale))
       }
     }
 

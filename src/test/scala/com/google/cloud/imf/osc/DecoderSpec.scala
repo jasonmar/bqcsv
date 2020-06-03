@@ -68,7 +68,7 @@ class DecoderSpec extends AnyFlatSpec {
     }
   }
 
-  "timestamp decoder" should "zone2" in {
+  it should "zone2" in {
     val sp = new TableSchemaProvider(Schema.of(FieldList.of(Seq[Field](
       Field.of("a", StandardSQLTypeName.STRING),
       Field.of("b", StandardSQLTypeName.TIMESTAMP),
@@ -118,7 +118,51 @@ class DecoderSpec extends AnyFlatSpec {
     }
   }
 
-  it should "parse schema" in {
+  "StringToNum" should "decimal" in {
+    // positive
+    assert(StringToNum.decimalValue("1",5) == 100000L)
+    assert(StringToNum.decimalValue("0.01",5) == 1000L)
+    assert(StringToNum.decimalValue("0.00001",5) == 1L)
+
+    // no leading zero
+    assert(StringToNum.decimalValue(".01",5) == 1000L)
+    assert(StringToNum.decimalValue(".00001",5) == 1L)
+    assert(StringToNum.decimalValue(".",5) == 0L)
+
+    // negative
+    assert(StringToNum.decimalValue("-0.01",5) == -1000L)
+    assert(StringToNum.decimalValue("-.01",5) == -1000L)
+    assert(StringToNum.decimalValue("-1",5) == -100000L)
+    assert(StringToNum.decimalValue("-.00001",5) == -1L)
+    assert(StringToNum.decimalValue("-0.00001",5) == -1L)
+
+    // excess scale
+    assert(StringToNum.decimalValue("0.010001",5) == 1000L)
+    assert(StringToNum.decimalValue(".010001",5) == 1000L)
+    assert(StringToNum.decimalValue("1.000001",5) == 100000L)
+    assert(StringToNum.decimalValue(".000011",5) == 1L)
+    assert(StringToNum.decimalValue("0.000011",5) == 1L)
+    assert(StringToNum.decimalValue("-0.010001",5) == -1000L)
+    assert(StringToNum.decimalValue("-.010001",5) == -1000L)
+    assert(StringToNum.decimalValue("-1.000001",5) == -100000L)
+    assert(StringToNum.decimalValue("-.000011",5) == -1L)
+    assert(StringToNum.decimalValue("-0.000011",5) == -1L)
+  }
+
+  it should "long" in {
+    assert(StringToNum.longValue("1") == 1L)
+    assert(StringToNum.longValue("11") == 11L)
+    assert(StringToNum.longValue("111") == 111)
+    assert(StringToNum.longValue("12345") == 12345L)
+    assert(StringToNum.longValue("123456789") == 123456789L)
+    assert(StringToNum.longValue("-1") == -1L)
+    assert(StringToNum.longValue("-11") == -11L)
+    assert(StringToNum.longValue("-111") == -111L)
+    assert(StringToNum.longValue("-12345") == -12345L)
+    assert(StringToNum.longValue("-123456789") == -123456789L)
+  }
+
+  "cli" should "parse schema" in {
     val example = "key1:STRING:24,key2:STRING:24,key3:STRING:24,key4:STRING:24,STATUS:STRING:15,date1:TIMESTAMP,qty1:NUMERIC:14.4,key5:STRING:24,key6:STRING:24,qty2:NUMERIC:14.4,date2:TIMESTAMP,key7:STRING:24,key8:STRING:24,timestamp1:TIMESTAMP,timestamp2:TIMESTAMP,id1:STRING:40,id2:STRING:40,id3:STRING:40,id4:STRING:40,id5:NUMERIC:5.0,rank:TIMESTAMP:America/Chicago"
     val sp = CliSchemaProvider(example)
     val expected = Array[Decoder](
