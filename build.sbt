@@ -15,7 +15,7 @@
  */
 organization := "com.google.cloud.imf"
 name := "open-systems-connector"
-version := "0.6.5-SNAPSHOT"
+version := "0.6.6-SNAPSHOT"
 scalaVersion := "2.13.1"
 publishMavenStyle := true
 

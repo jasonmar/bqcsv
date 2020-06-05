@@ -66,7 +66,7 @@ object Decoders {
       val lcv = column.asInstanceOf[LongColumnVector]
       if (s.isEmpty){
         lcv.isNull.update(i, true)
-        if (!lcv.noNulls) lcv.noNulls = false
+        if (lcv.noNulls) lcv.noNulls = false
       } else {
         lcv.vector.update(i, StringToNum.longValue(s.trim))
       }
@@ -86,7 +86,7 @@ object Decoders {
       val dcv = column.asInstanceOf[DoubleColumnVector]
       if (s.isEmpty){
         dcv.isNull.update(i, true)
-        if (!dcv.noNulls) dcv.noNulls = false
+        if (dcv.noNulls) dcv.noNulls = false
       } else {
         val double = s.trim.toDouble
         dcv.vector.update(i, double)
@@ -117,7 +117,7 @@ object Decoders {
       val dcv = column.asInstanceOf[DateColumnVector]
       if (s.isEmpty){
         dcv.isNull.update(i, true)
-        if (!dcv.noNulls) dcv.noNulls = false
+        if (dcv.noNulls) dcv.noNulls = false
       } else {
         val dt = LocalDate.from(fmt.parse(s.trim)).toEpochDay
         dcv.vector.update(i, dt)
@@ -140,7 +140,7 @@ object Decoders {
       val tcv = column.asInstanceOf[TimestampColumnVector]
       if (s.isEmpty){
         tcv.isNull.update(i, true)
-        if (!tcv.noNulls) tcv.noNulls = false
+        if (tcv.noNulls) tcv.noNulls = false
       } else {
         val timestamp = OffsetDateTime.from(fmt.parse(s.trim)).atZoneSameInstant(UTC)
         tcv.time.update(i, Timestamp.valueOf(timestamp.toLocalDateTime).getTime)
@@ -164,7 +164,7 @@ object Decoders {
       val tcv = column.asInstanceOf[TimestampColumnVector]
       if (s.isEmpty){
         tcv.isNull.update(i, true)
-        if (!tcv.noNulls) tcv.noNulls = false
+        if (tcv.noNulls) tcv.noNulls = false
       } else {
         val timestamp = ZonedDateTime.from(fmt.parse(s.trim)).withZoneSameInstant(UTC)
         tcv.time.update(i, Timestamp.valueOf(timestamp.toLocalDateTime).getTime)
@@ -189,7 +189,7 @@ object Decoders {
       val tcv = column.asInstanceOf[TimestampColumnVector]
       if (s.isEmpty){
         tcv.isNull.update(i, true)
-        if (!tcv.noNulls) tcv.noNulls = false
+        if (tcv.noNulls) tcv.noNulls = false
       } else {
         val timestamp = LocalDateTime.from(fmt.parse(s.trim)).atZone(zone).withZoneSameInstant(UTC)
         tcv.time.update(i, Timestamp.valueOf(timestamp.toLocalDateTime).getTime)
@@ -210,10 +210,11 @@ object Decoders {
     require(precision >= 0 && precision < 38, s"invalid precision $precision")
     require(scale >= 0 && scale < 38, s"invalid scale $scale")
     override def get(s: String, column: ColumnVector, i: Int): Unit = {
+      println(column.getClass)
       val dcv = column.asInstanceOf[Decimal64ColumnVector]
       if (s.isEmpty){
         dcv.isNull.update(i, true)
-        if (!dcv.noNulls) dcv.noNulls = false
+        if (dcv.noNulls) dcv.noNulls = false
       } else {
         dcv.vector.update(i, StringToNum.decimalValue(s, scale))
       }
