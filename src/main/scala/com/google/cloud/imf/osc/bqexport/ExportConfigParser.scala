@@ -57,4 +57,9 @@ object ExportConfigParser
     .optional
     .text("Number of Threads")
     .action{(x,c) => c.copy(paralellism = x)}
+
+  opt[String]("outputFileType")
+    .optional
+    .text("Output file type ORC or SEQ")
+    .action{(x,c) => c.copy(outputFileType = x)}
 }

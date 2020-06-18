@@ -33,7 +33,7 @@ class BQExporter(schema: Schema,
                  gcs: Storage,
                  bucket: String,
                  name: String,
-                 table: String) extends Logging {
+                 table: String) extends Logging with Export {
   private val fields: IndexedSeq[AvroField] =
     schema.getFields.asScala.toArray.toIndexedSeq.map(AvroField)
   private val reader: GenericDatumReader[GenericRecord] =

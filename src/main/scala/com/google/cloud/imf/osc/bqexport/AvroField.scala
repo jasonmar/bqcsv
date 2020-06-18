@@ -63,7 +63,10 @@ case class AvroField(field: Schema.Field) {
       } else if (isFloat) {
         val x = v.asInstanceOf[Float]
         sb.append(x)
-      } else {
+      } else if (isBoolean) {
+        val x = v.asInstanceOf[Boolean]
+        sb.append(x)
+      }else {
         val msg = s"unhandled type ${field.schema()} ${v.getClass.getCanonicalName}"
         throw new RuntimeException(msg)
       }
@@ -111,6 +114,10 @@ case class AvroField(field: Schema.Field) {
 
   val isDouble: Boolean =
     typeSchema.getType == Schema.Type.DOUBLE &&
+      null == typeSchema.getJsonProp("logicalType")
+
+  val isBoolean: Boolean =
+    typeSchema.getType == Schema.Type.BOOLEAN &&
       null == typeSchema.getJsonProp("logicalType")
 
   val scale: Int = if (isDecimal) typeSchema.getJsonProp("scale").getIntValue else -1

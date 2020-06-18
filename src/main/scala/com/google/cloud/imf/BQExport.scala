@@ -20,7 +20,7 @@ import java.util.concurrent.Executors
 
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessionRequest, DataFormat, ReadRowsRequest, ReadRowsResponse, ReadSession}
-import com.google.cloud.imf.osc.bqexport.{BQExporter, ExportConfig, ExportConfigParser}
+import com.google.cloud.imf.osc.bqexport.{BQExportToSeqFile, BQExporter, ExportConfig, ExportConfigParser}
 import com.google.cloud.imf.osc.{GCS, Logging, Util}
 import com.google.cloud.storage.Storage
 import org.apache.avro.Schema
@@ -75,7 +75,11 @@ object BQExport extends Logging {
 
         Future {
           var rowCount: Long = 0
-          val exporter = new BQExporter(schema, streamId, gcs, cfg.bucket, cfg.name, cfg.table)
+          val exporter = if (cfg.outputFileType == "SEQ") {
+            new BQExportToSeqFile(schema, streamId, gcs, cfg.bucket, cfg.name, cfg.table)
+          }else{
+            new BQExporter(schema, streamId, gcs, cfg.bucket, cfg.name, cfg.table)
+          }
           client.readRowsCallable.call(readRowsRequest).forEach{res =>
             if (res.hasAvroRows)
               rowCount += exporter.processRows(res.getAvroRows)

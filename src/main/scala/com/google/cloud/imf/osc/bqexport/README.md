@@ -27,18 +27,20 @@ Usage: com.google.cloud.imf.BQExport [options]
   --table <value>          Source Table
   --destUri <value>        Destination URI
   --paralellism <value>    Number of Threads
+  --outputFileType <value> Sequence(SEQ) or ORC File types. If nothing specified, it uses ORC File as output. 
 ```
 
 example
 
 ```sh
 java -Xms1g -Xmx1g \
-  -cp "open-systems-connector_2.13-0.6.4-SNAPSHOT.jar:open-systems-connector-assembly-0.6.4-SNAPSHOT-deps.jar" \
+  -cp "open-systems-connector_2.13-0.6.7-SNAPSHOT.jar:open-systems-connector-assembly-0.6.7-SNAPSHOT-deps.jar" \
   com.google.cloud.imf.BQExport \
   --billingProject project \
   --projectId project \
   --dataset dataset \
   --table table \
   --paralellism 2 \
+  --outputFileType SEQ \
   --destUri gs://bucket/prefix
 ```

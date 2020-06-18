@@ -25,7 +25,8 @@ case class ExportConfig(billingProjectId: String = "",
                         table: String = "",
                         filter: String = "",
                         destUri: String = "",
-                        paralellism: Int = 1) {
+                        paralellism: Int = 1,
+                        outputFileType: String = "ORC") {
   def projectPath = s"projects/$billingProjectId"
   def tablePath = s"projects/$projectId/datasets/$dataset/tables/$table"
 
