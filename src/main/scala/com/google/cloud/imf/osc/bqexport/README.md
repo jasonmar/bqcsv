@@ -43,4 +43,16 @@ java -Xms1g -Xmx1g \
   --paralellism 2 \
   --outputFileType SEQ \
   --destUri gs://bucket/prefix
+
+Export bigquery-public-data sample data to Sequence file: 
+java -Xms1g -Xmx1g \
+  -cp "open-systems-connector-assembly-0.6.7-SNAPSHOT.jar" \
+  com.google.cloud.imf.BQExport \
+  --billingProject billingGCPProject \
+  --projectId bigquery-public-data  \
+  --dataset samples \
+  --table shakespeare \
+  --paralellism 2 \
+  --outputFileType SEQ \
+  --destUri gs://wmt-distcp/seqfiles/
 ```
