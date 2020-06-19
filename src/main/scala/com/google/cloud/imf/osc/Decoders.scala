@@ -210,7 +210,7 @@ object Decoders {
     require(precision >= 0 && precision < 38, s"invalid precision $precision")
     require(scale >= 0 && scale < 38, s"invalid scale $scale")
     override def get(s: String, column: ColumnVector, i: Int): Unit = {
-      println(column.getClass)
+//      println(column.getClass)
       val dcv = column.asInstanceOf[Decimal64ColumnVector]
       if (s.isEmpty){
         dcv.isNull.update(i, true)
