@@ -1,13 +1,13 @@
 # BQExport
 
 This utility exports a BigQuery table to GCS
-as gzipped csv in partitions of ~50M rows.
+as ORC file format or Sequence file format as .seq or gzipped csv in partitions of ~50M rows.
 
 Output files are generated based on the table name and
 have a suffix indicating stream id and partition id for that stream.
 
 For a `--destUri` of `gs://bucket/prefix`, the first
-resulting filename will be `gs://bucket/prefix/tablename-0-0.csv.gz`
+resulting filename will be `gs://bucket/prefix/tablename-0-0.csv.gz` or `gs://bucket/prefix/tablename-0-0.seq`
 
 
 ## Help Text
@@ -15,7 +15,7 @@ resulting filename will be `gs://bucket/prefix/tablename-0-0.csv.gz`
 ```
 BQExport - Google Cloud Open Systems Connector
 
-*  Exports BigQuery table to GCS as ORC
+*  Exports BigQuery table to GCS as ORC or SEQ format
 
 Usage: com.google.cloud.imf.BQExport [options]
 
