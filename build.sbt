@@ -15,7 +15,7 @@
  */
 organization := "com.google.cloud.imf"
 name := "open-systems-connector"
-version := "0.6.8-SNAPSHOT"
+version := "0.7.0-SNAPSHOT"
 scalaVersion := "2.13.1"
 publishMavenStyle := true
 
@@ -27,19 +27,19 @@ libraryDependencies ++= Seq(
   "org.scalatest"     %% "scalatest" % "3.1.1" % Test
 )
 
-libraryDependencies ++= Seq("com.google.guava" % "guava" % "28.2-jre")
+libraryDependencies ++= Seq("com.google.guava" % "guava" % "29.0-jre")
 
 // Google libraries
 libraryDependencies ++= Seq(
-  "com.google.api-client"     % "google-api-client" % "1.30.9", // provided for google-cloud-bigquery
-  "com.google.auto.value"     % "auto-value-annotations" % "1.7", // provided for google-cloud-bigquery
-  "com.google.http-client"    % "google-http-client-apache-v2" % "1.34.2",
-  "com.google.cloud"          % "google-cloud-bigquery" % "1.108.1",
-  "com.google.cloud"          % "google-cloud-bigquerystorage" % "0.131.2-beta",
-  "com.google.cloud"          % "google-cloud-compute" % "0.117.0-alpha",
-  "com.google.cloud"          % "google-cloud-storage" % "1.106.0",
-  "com.google.protobuf"       % "protobuf-java" % "3.11.4",
-  "com.google.protobuf"       % "protobuf-java-util" % "3.11.4"
+  "com.google.api-client"     % "google-api-client" % "1.30.10", // provided for google-cloud-bigquery
+  "com.google.auto.value"     % "auto-value-annotations" % "1.7.4", // provided for google-cloud-bigquery
+  "com.google.http-client"    % "google-http-client-apache-v2" % "1.36.0",
+  "com.google.cloud"          % "google-cloud-bigquery" % "1.117.1",
+  "com.google.cloud"          % "google-cloud-bigquerystorage" % "1.5.1",
+  "com.google.cloud"          % "google-cloud-compute" % "0.118.0-alpha",
+  "com.google.cloud"          % "google-cloud-storage" % "1.112.0",
+  "com.google.protobuf"       % "protobuf-java" % "3.12.4",
+  "com.google.protobuf"       % "protobuf-java-util" % "3.12.4"
 ).map(_ excludeAll exGuava)
 
 // Apache libraries
