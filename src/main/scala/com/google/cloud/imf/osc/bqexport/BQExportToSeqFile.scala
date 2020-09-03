@@ -22,10 +22,13 @@ import com.google.cloud.storage.Storage
 import org.apache.avro.Schema
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 import org.apache.avro.io.{BinaryDecoder, DecoderFactory}
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.io.compress.{CompressionCodec, GzipCodec, SnappyCodec}
 import org.apache.hadoop.io.{IOUtils, SequenceFile, Text}
 
 import scala.jdk.CollectionConverters.ListHasAsScala
+import scala.util.Try
 
 
 class BQExportToSeqFile(schema: Schema,
@@ -36,7 +39,18 @@ class BQExportToSeqFile(schema: Schema,
                         table: String)
   extends Logging with Export {
   private val stats = new FileSystem.Statistics(SimpleGCSFileSystem.Scheme)
-  private val fs = new SimpleGCSFileSystem(gcs, stats)
+  private val conf: Configuration = {
+    val c = new Configuration()
+    SequenceFile.setDefaultCompressionType(c, SequenceFile.CompressionType.BLOCK)
+    c
+  }
+
+  private val fs: FileSystem = new SimpleGCSFileSystem(gcs, stats, conf)
+  private val compressionCodec: CompressionCodec = {
+    val c = Try(new SnappyCodec).getOrElse(new GzipCodec)
+    c.setConf(conf)
+    c
+  }
 
   private val fields: IndexedSeq[AvroField] =
     schema.getFields.asScala.toArray.toIndexedSeq.map(AvroField)
@@ -80,7 +94,8 @@ class BQExportToSeqFile(schema: Schema,
       objName = s"$name/$table-$id-$part.seq"
       System.out.println(s"initWriter objName: $objName")
       logger.info(s"Stream $id - writing to $objName")
-      writer = SequenceFile.createWriter(fs, fs.getConf, new Path(objName), KVClass, KVClass)
+      writer = SequenceFile.createWriter(fs, fs.getConf, new Path(objName), KVClass, KVClass,
+        SequenceFile.CompressionType.BLOCK, compressionCodec)
       part += 1
       partRowCount = 0
     }

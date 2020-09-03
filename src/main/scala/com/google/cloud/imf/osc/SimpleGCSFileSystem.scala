@@ -47,9 +47,11 @@ object SimpleGCSFileSystem {
  * @param stats FileSystem.Statistics used to count bytes written
  */
 class SimpleGCSFileSystem(private val storage: Storage,
-                          private var stats: FileSystem.Statistics)
+                          private var stats: FileSystem.Statistics,
+                          conf: Configuration = new Configuration())
   extends FileSystem {
   import SimpleGCSFileSystem.{Scheme, toBlobId}
+  setConf(conf)
 
   def resetStats(): Unit = stats.reset()
 
