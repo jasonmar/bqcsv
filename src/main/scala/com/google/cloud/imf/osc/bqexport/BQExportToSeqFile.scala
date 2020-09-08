@@ -55,7 +55,7 @@ class BQExportToSeqFile(schema: Schema,
         c
     } else {
         val c = new SnappyCodec
-        logger.warn(s"Using Snappy compression")
+        logger.info(s"Using Snappy compression")
         c.setConf(conf)
         c
     }
