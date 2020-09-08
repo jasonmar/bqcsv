@@ -24,7 +24,7 @@ import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 import org.apache.avro.io.{BinaryDecoder, DecoderFactory}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.io.compress.{CompressionCodec, GzipCodec, SnappyCodec}
+import org.apache.hadoop.io.compress.{CompressionCodec, DefaultCodec, GzipCodec, SnappyCodec}
 import org.apache.hadoop.io.{IOUtils, SequenceFile, Text}
 import org.apache.hadoop.util.NativeCodeLoader
 
@@ -56,8 +56,8 @@ class BQExportToSeqFile(schema: Schema,
       c
     } catch {
       case _: UnsatisfiedLinkError =>
-        val c = new GzipCodec
-        logger.warn(s"Snappy native libraries not available - using Gzip")
+        val c = new DefaultCodec
+        logger.warn(s"Snappy native libraries not available - using DefaultCodec")
         c.setConf(conf)
         c
     }
