@@ -91,7 +91,7 @@ class BQExportToSeqFile(schema: Schema,
   private def initWriter(): Unit = {
     if (partRowCount > PartRowLimit || writer == null){
       close()
-      objName = s"$name/$table-$id-$part.seq"
+      objName = s"gs://$bucket/$name/$table-$id-$part.seq"
       System.out.println(s"initWriter objName: $objName")
       logger.info(s"Stream $id - writing to $objName")
       writer = SequenceFile.createWriter(fs, fs.getConf, new Path(objName), KVClass, KVClass,
