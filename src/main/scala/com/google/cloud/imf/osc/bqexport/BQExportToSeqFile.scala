@@ -48,14 +48,15 @@ class BQExportToSeqFile(schema: Schema,
 
   private val fs: FileSystem = new SimpleGCSFileSystem(gcs, stats, conf)
   private val compressionCodec: CompressionCodec = {
-    if (NativeCodeLoader.buildSupportsSnappy()) {
+    try {
+      val c = new SnappyCodec
+      logger.info(s"Using Snappy compression")
+      c.setConf(conf)
+      c
+    } catch {
+      case _: UnsatisfiedLinkError =>
         val c = new GzipCodec
         logger.warn(s"Snappy native libraries not available - using Gzip")
-        c.setConf(conf)
-        c
-    } else {
-        val c = new SnappyCodec
-        logger.info(s"Using Snappy compression")
         c.setConf(conf)
         c
     }
