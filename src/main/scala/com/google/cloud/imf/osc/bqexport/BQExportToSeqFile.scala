@@ -26,9 +26,10 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.compress.{CompressionCodec, GzipCodec, SnappyCodec}
 import org.apache.hadoop.io.{IOUtils, SequenceFile, Text}
+import org.apache.hadoop.util.NativeCodeLoader
 
 import scala.jdk.CollectionConverters.ListHasAsScala
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 
 class BQExportToSeqFile(schema: Schema,
@@ -47,9 +48,17 @@ class BQExportToSeqFile(schema: Schema,
 
   private val fs: FileSystem = new SimpleGCSFileSystem(gcs, stats, conf)
   private val compressionCodec: CompressionCodec = {
-    val c = Try(new SnappyCodec).getOrElse(new GzipCodec)
-    c.setConf(conf)
-    c
+    if (NativeCodeLoader.buildSupportsSnappy()) {
+        val c = new GzipCodec
+        logger.warn(s"Snappy native libraries not available - using Gzip")
+        c.setConf(conf)
+        c
+    } else {
+        val c = new SnappyCodec
+        logger.warn(s"Using Snappy compression")
+        c.setConf(conf)
+        c
+    }
   }
 
   private val fields: IndexedSeq[AvroField] =
@@ -82,7 +91,7 @@ class BQExportToSeqFile(schema: Schema,
   def close(): Unit = {
     if (writer != null) {
       IOUtils.closeStream(writer)
-      logger.info(s"Stream $id - gs://$bucket/$objName closed after writing $partRowCount rows")
+      logger.info(s"Stream $id - $objName closed after writing $partRowCount rows")
       writer = null
       objName = null
     }
