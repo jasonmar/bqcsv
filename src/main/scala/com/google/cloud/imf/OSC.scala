@@ -17,11 +17,14 @@
 package com.google.cloud.imf
 
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.{ArrayBlockingQueue, Callable, ExecutorService, Executors, TimeUnit}
+import java.util.concurrent.{ArrayBlockingQueue, Callable, Executors, TimeUnit}
 
 import com.google.auth.oauth2.GoogleCredentials
-import com.google.cloud.bigquery.{BigQuery, ExternalTableDefinition, JobId, JobInfo, StandardTableDefinition, TableId}
-import com.google.cloud.imf.osc.{AutoDetectProvider, BQ, CliSchemaProvider, GCS, Logging, NoOpMemoryManager, OSCConfig, OSCConfigParser, OrcAppender, SchemaProvider, SimpleGCSFileSystem, TableSchemaProvider, Util}
+import com.google.cloud.bigquery.{BigQuery, ExternalTableDefinition, JobId, JobInfo,
+  StandardTableDefinition, TableId}
+import com.google.cloud.imf.osc.{AutoDetectProvider, BQ, CliSchemaProvider, GCS, Logging,
+  NoOpMemoryManager, OSCConfig, OSCConfigParser, OrcAppender, SchemaProvider, SimpleGCSFileSystem,
+  TableSchemaProvider, Util}
 import com.google.cloud.storage.Storage
 import com.google.common.collect.Queues
 import com.google.common.io.Resources

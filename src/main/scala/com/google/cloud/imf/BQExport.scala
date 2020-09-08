@@ -19,7 +19,7 @@ package com.google.cloud.imf
 import java.util.concurrent.Executors
 
 import com.google.auth.oauth2.GoogleCredentials
-import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessionRequest, DataFormat, ReadRowsRequest, ReadRowsResponse, ReadSession}
+import com.google.cloud.bigquery.storage.v1.{BigQueryReadClient, CreateReadSessionRequest, DataFormat, ReadRowsRequest, ReadSession}
 import com.google.cloud.imf.osc.bqexport.{BQExportToSeqFile, BQExporter, ExportConfig, ExportConfigParser}
 import com.google.cloud.imf.osc.{GCS, Logging, Util}
 import com.google.cloud.storage.Storage

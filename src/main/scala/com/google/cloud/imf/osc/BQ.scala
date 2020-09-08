@@ -26,7 +26,7 @@ import org.threeten.bp.Duration
 
 
 object BQ extends Logging {
-  val UserAgent = "google-pso-tool/bqcsv/0.3"
+  val UserAgent = "google-pso-tool/open-systems-connector/0.7"
 
   def defaultClient(project: String, location: String, credentials: Credentials): BigQuery = {
     BigQueryOptions.newBuilder

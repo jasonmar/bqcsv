@@ -22,10 +22,9 @@ import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, OffsetDateTime, ZoneId, ZonedDateTime}
 
 import com.google.cloud.bigquery.StandardSQLTypeName
-import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector, Decimal64ColumnVector, DoubleColumnVector, LongColumnVector, TimestampColumnVector}
+import org.apache.hadoop.hive.ql.exec.vector.{BytesColumnVector, ColumnVector, DateColumnVector,
+  Decimal64ColumnVector, DoubleColumnVector, LongColumnVector, TimestampColumnVector}
 import org.apache.orc.TypeDescription
-
-import scala.annotation.switch
 
 
 object Decoders {

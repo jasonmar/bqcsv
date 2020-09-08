@@ -24,12 +24,11 @@ import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 import org.apache.avro.io.{BinaryDecoder, DecoderFactory}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.io.compress.{CompressionCodec, DefaultCodec, GzipCodec, SnappyCodec}
+import org.apache.hadoop.io.compress.{CompressionCodec, DefaultCodec, SnappyCodec}
 import org.apache.hadoop.io.{IOUtils, SequenceFile, Text}
 import org.apache.hadoop.util.NativeCodeLoader
 
 import scala.jdk.CollectionConverters.ListHasAsScala
-import scala.util.{Failure, Success, Try}
 
 
 class BQExportToSeqFile(schema: Schema,
